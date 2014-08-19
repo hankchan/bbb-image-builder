@@ -540,12 +540,85 @@ unsecure_root () {
 	fi
 }
 
+install_hsbms () {
+	
+	ssh-keygen -t rsa
+	ssh-copy-id -i ~/.ssh/id_rsa.pub  root@114.215.139.157
+	
+	wfile="/etc/systemd/system/autossh.service"
+	echo "[Unit]" > ${wfile}
+	echo "Description=AutoSSH service for a reverse tunnel from server to localhost" >> ${wfile}
+	echo "After=network.target" >> ${wfile}
+	echo "" >> ${wfile}
+	echo "[Service]" >> ${wfile}
+	echo 'ExecStart=/usr/bin/autossh -M0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 3" -p 22 root@114.215.139.157  -R 0:localhost:22  -C -N -f -g' >> ${wfile}
+	echo "" >> ${wfile}
+	echo "[Install]" >> ${wfile}
+	echo "WantedBy=multi-user.target" >> ${wfile}
+
+	systemctl enable autossh.service
+	
+	wfile="/etc/supervisor/conf.d/hs_bbb.conf"
+	echo "[program:pon]" > ${wfile}
+	echo "command=pon" >> ${wfile}
+	echo "autostart=true" >> ${wfile}
+	echo "autorestart=false" >> ${wfile}
+	echo "startsecs=0" >> ${wfile}
+	echo "" >> ${wfile}
+	echo "[program:hs_bbb_capture]" >> ${wfile}
+	echo "command=/root/hyperstrong/hs_bbb_capture" >> ${wfile}
+	echo "directory=/root/hyperstrong/" >> ${wfile}
+	echo "autostart=true" >> ${wfile}
+	echo "autorestart=true" >> ${wfile}
+	echo "startsecs=1" >> ${wfile}
+	echo "startretries=1000" >> ${wfile}
+	echo "redirect_stderr=true" >> ${wfile}
+	echo "stdout_logfile=/root/hyperstrong/supervisor_capture_log.txt" >> ${wfile}
+	echo "stdout_logfile_maxbytes=4MB" >> ${wfile}
+	echo "stdout_logfile_backups=0" >> ${wfile}
+	echo "stderr_logfile=/root/hyperstrong/supervisor_capture_err.txt" >> ${wfile}
+	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
+	echo "stdout_logfile_backups=0" >> ${wfile}
+	echo "" >> ${wfile}
+	echo "[program:hs_bbb_gps]" >> ${wfile}
+	echo "command=/root/hyperstrong/hs_bbb_gps" >> ${wfile}
+	echo "directory=/root/hyperstrong/" >> ${wfile}
+	echo "autostart=true" >> ${wfile}
+	echo "autorestart=true" >> ${wfile}
+	echo "startsecs=1" >> ${wfile}
+	echo "startretries=1000" >> ${wfile}
+	echo "redirect_stderr=true" >> ${wfile}
+	echo "stdout_logfile=/root/hyperstrong/supervisor_gps_log.txt" >> ${wfile}
+	echo "stdout_logfile_maxbytes=4MB" >> ${wfile}
+	echo "stdout_logfile_backups=0" >> ${wfile}
+	echo "stderr_logfile=/root/hyperstrong/supervisor_gps_err.txt" >> ${wfile}
+	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
+	echo "stdout_logfile_backups=0" >> ${wfile}
+	echo "" >> ${wfile}
+	echo "[program:hs_bbb_remote]" >> ${wfile}
+	echo "command=/root/hyperstrong/hs_bbb_remote" >> ${wfile}
+	echo "directory=/root/hyperstrong/" >> ${wfile}
+	echo "autostart=true" >> ${wfile}
+	echo "autorestart=true" >> ${wfile}
+	echo "startsecs=1" >> ${wfile}
+	echo "startretries=1000" >> ${wfile}
+	echo "redirect_stderr=true" >> ${wfile}
+	echo "stdout_logfile=/root/hyperstrong/supervisor_remote_log.txt" >> ${wfile}
+	echo "stdout_logfile_maxbytes=4MB" >> ${wfile}
+	echo "stdout_logfile_backups=0" >> ${wfile}
+	echo "stderr_logfile=/root/hyperstrong/supervisor_remote_err.txt" >> ${wfile}
+	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
+	echo "stdout_logfile_backups=0" >> ${wfile}
+}
+
 is_this_qemu
 
 #install_picky_packages
 
 setup_system
 setup_desktop
+
+install_hsbms
 
 #install_node_pkgs
 #install_pip_pkgs
