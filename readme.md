@@ -1,22 +1,19 @@
-安装和配置指导：
+Beaglebone Black SD安装镜像:
 
 1.下载源代码
 git clone https://github.com/hankchan/bbb_sd_image_builder.git
 
-2. 更新源代码
+2.更新源代码
 git pull
 
 3.执行自定义编译脚本
-
-./beagleboard.org_image_hs.sh
+sudo ./beagleboard.org_image_hs.sh
 
 4.生成SD文件
-
 cd deploy
-./gift_wrap_final_images.sh
+sudo ./gift_wrap_final_images.sh
 
-
-**** ***
+********
 
 
 Scripts to support customized image generation for many arm systems
