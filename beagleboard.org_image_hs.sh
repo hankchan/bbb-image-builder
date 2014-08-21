@@ -3,8 +3,6 @@
 time=$(date +%Y-%m-%d)
 DIR="$PWD"
 
-export apt_proxy=mirrors.aliyuncs.com/debian/
-
 ./RootStock-NG.sh -c bb.org-console-debian-stable
 
 debian_stable="7.6"
