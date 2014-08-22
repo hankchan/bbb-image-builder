@@ -214,7 +214,6 @@ setup_desktop () {
 			sed -i -e 's:TryExec=lxterminal -l -e bash:TryExec=lxterminal:g' /usr/share/applications/lxterminal.desktop
 		fi
 	fi
-
 }
 
 cleanup_npm_cache () {
@@ -544,6 +543,7 @@ unsecure_root () {
 install_hsbms () {
 
 	# Get latest HyperStrong EV Application to /root/hyperstrong
+	mkdir -p /root/hyperstrong/data
 	git_repo="https://github.com/hankchan/bbb_hs_ev_app.git"
 	git_target_dir="/root/hyperstrong/"
 	git_clone
