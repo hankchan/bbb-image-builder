@@ -603,21 +603,30 @@ install_hsbms () {
 	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
 	echo "stdout_logfile_backups=0" >> ${wfile}
 
-	# ppp
-	#if [ -f /etc/ppp/peers/provider ] ; then
-		#sed -i -e 's:80:8080:g' /etc/apache2/ports.conf
-	#fi
-	#if [ -f /etc/chatscripts/pap ] ; then
-		#sed -i -e 's:80:8080:g' /etc/apache2/ports.conf
-	#fi
-
 	# crontab ntpdate 
-
 	echo "*/10 * * * * ntpdate -u 1.cn.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org" | crontab -
 
-	# /etc/rc/local
+	# ppp
+	wfile = "/etc/ppp/peers/provider"
+	if [ -f ${wfile}] ; then
+		sed -i -e 's:/dev/modem:/dev/ttyO2:g' ${wfile}
+		sed -i -e 's:"\*\*\*\*\*\*\*\*":"\*99\*\*\*1#:g' ${wfile}
+	fi
+	wfile = "/etc/chatscripts/pap"
+	if [ -f ${wfile} ] ; then
+		sed -i -e '/ATZ/aOK              AT+CGDCONT=1,"IP","3gnet",,0,0' ${wfile}
+		sed -i -e '/CGDCONT/aOK              AT+CGPSPWR=1' ${wfile}
+		sed -i -e '/CGPSPWR/aOK              AT+CGPSRST=1' ${wfile}
+		sed -i -e '/CGPSRST/aOK              AT+CGPSIPR=115200' ${wfile}
+	fi
 
-	
+	# /etc/rc/local
+	wfile = "/etc/rc/local"
+	if [ -f ${wfile} ] ; then
+		sed -i -e '$iip link set can0 up type can bitrate 125000' ${wfile}
+		sed -i -e '$ipon' ${wfile}
+		sed -i -e '$i/usr/bin/autossh -M0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 3" -p 22 root@114.215.139.157  -R 0:localhost:22  -C -N -f -g' ${wfile}
+	fi	
 }
 
 is_this_qemu
