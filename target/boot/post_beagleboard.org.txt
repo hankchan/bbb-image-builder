@@ -14,4 +14,3 @@ cape_enable=capemgr.enable_partno=BB-UART2,BB-UART4,BB-BONE-SERL-01:00A1
 #cape_disable=capemgr.disable_partno=BB-BONELT-HDMI
 #cape_enable=capemgr.enable_partno=BB-BONE-AUDI-02
 
-
