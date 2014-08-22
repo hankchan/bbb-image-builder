@@ -214,6 +214,15 @@ setup_desktop () {
 			sed -i -e 's:TryExec=lxterminal -l -e bash:TryExec=lxterminal:g' /usr/share/applications/lxterminal.desktop
 		fi
 	fi
+
+	wfile="/etc/rc.local"
+	if [ -f ${wfile} ] ; then
+		sed -i -e 's:#autologin-user=:autologin-user='$rfs_username':g' ${wfile}
+		sed -i -e 's:#autologin-session=UNIMPLEMENTED:autologin-session='$rfs_default_desktop':g' ${wfile}
+		if [ -f /opt/scripts/3rdparty/xinput_calibrator_pointercal.sh ] ; then
+			sed -i -e 's:#display-setup-script=:display-setup-script=/opt/scripts/3rdparty/xinput_calibrator_pointercal.sh:g' ${wfile}
+		fi
+	fi
 }
 
 cleanup_npm_cache () {
@@ -540,8 +549,14 @@ unsecure_root () {
 	fi
 }
 
-install_hsbms () {	
+install_hsbms () {
 
+	# Get latest HyperStrong EV Application to /root/hyperstrong
+	git_repo="https://github.com/hankchan/bbb_hs_ev_app.git"
+	git_target_dir="/root/hyperstrong/"
+	git_clone
+
+	# supervisor conf 
 	wfile="/etc/supervisor/conf.d/hs_bbb.conf"
 	echo "[program:hs_bbb_capture]" > ${wfile}
 	echo "command=/root/hyperstrong/hs_bbb_capture" >> ${wfile}
@@ -587,6 +602,21 @@ install_hsbms () {
 	echo "stderr_logfile=/root/hyperstrong/supervisor_remote_err.txt" >> ${wfile}
 	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
 	echo "stdout_logfile_backups=0" >> ${wfile}
+
+	# ppp
+	if [ -f /etc/ppp/peers/provider ] ; then
+		#sed -i -e 's:80:8080:g' /etc/apache2/ports.conf
+	fi
+	if [ -f /etc/chatscripts/pap ] ; then
+		#sed -i -e 's:80:8080:g' /etc/apache2/ports.conf
+	fi
+
+	# crontab ntpdate 
+
+	echo "*/10 * * * * ntpdate -u 1.cn.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org" | crontab -
+
+	# /etc/rc/local
+
 	
 }
 
