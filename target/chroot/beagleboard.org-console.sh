@@ -215,14 +215,6 @@ setup_desktop () {
 		fi
 	fi
 
-	wfile="/etc/rc.local"
-	if [ -f ${wfile} ] ; then
-		sed -i -e 's:#autologin-user=:autologin-user='$rfs_username':g' ${wfile}
-		sed -i -e 's:#autologin-session=UNIMPLEMENTED:autologin-session='$rfs_default_desktop':g' ${wfile}
-		if [ -f /opt/scripts/3rdparty/xinput_calibrator_pointercal.sh ] ; then
-			sed -i -e 's:#display-setup-script=:display-setup-script=/opt/scripts/3rdparty/xinput_calibrator_pointercal.sh:g' ${wfile}
-		fi
-	fi
 }
 
 cleanup_npm_cache () {
