@@ -604,12 +604,12 @@ install_hsbms () {
 	echo "stdout_logfile_backups=0" >> ${wfile}
 
 	# ppp
-	if [ -f /etc/ppp/peers/provider ] ; then
+	#if [ -f /etc/ppp/peers/provider ] ; then
 		#sed -i -e 's:80:8080:g' /etc/apache2/ports.conf
-	fi
-	if [ -f /etc/chatscripts/pap ] ; then
+	#fi
+	#if [ -f /etc/chatscripts/pap ] ; then
 		#sed -i -e 's:80:8080:g' /etc/apache2/ports.conf
-	fi
+	#fi
 
 	# crontab ntpdate 
 
