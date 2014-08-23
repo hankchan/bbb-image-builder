@@ -603,29 +603,23 @@ install_hsbms () {
 
 	# ppp
 	echo "Configure ppp"
-	wfile = "/etc/ppp/peers/provider"
-	if [ -f ${wfile}] ; then
-		sed -i -e 's:/dev/modem:/dev/ttyO2:g' ${wfile}
-		sed -i -e 's:"\*\*\*\*\*\*\*\*":"\*99\*\*\*1#:g' ${wfile}
+	if [ -f /etc/ppp/peers/provider] ; then
+		sed -i -e 's:/dev/modem:/dev/ttyO2:g' /etc/ppp/peers/provider
+		sed -i -e 's:"\*\*\*\*\*\*\*\*":"\*99\*\*\*1#:g' /etc/ppp/peers/provider
 	fi
-	wfile = "/etc/chatscripts/pap"
-	if [ -f ${wfile} ] ; then
-		sed -i -e '/ATZ/aOK              AT+CGDCONT=1,"IP","3gnet",,0,0' ${wfile}
-		sed -i -e '/CGDCONT/aOK              AT+CGPSPWR=1' ${wfile}
-		sed -i -e '/CGPSPWR/aOK              AT+CGPSRST=1' ${wfile}
-		sed -i -e '/CGPSRST/aOK              AT+CGPSIPR=115200' ${wfile}
+	if [ -f /etc/chatscripts/pap ] ; then
+		sed -i -e '/ATZ/aOK              AT+CGDCONT=1,"IP","3gnet",,0,0' /etc/chatscripts/pap
+		sed -i -e '/CGDCONT/aOK              AT+CGPSPWR=1' /etc/chatscripts/pap
+		sed -i -e '/CGPSPWR/aOK              AT+CGPSRST=1' /etc/chatscripts/pap
+		sed -i -e '/CGPSRST/aOK              AT+CGPSIPR=115200' /etc/chatscripts/pap
 	fi
 
 	# /etc/rc/local
-<<<<<<< HEAD
 	echo "Configure /etc/rc.local"
-=======
->>>>>>> eadff3997d9b74b3fe84a99a0add02dd7963f357
-	wfile = "/etc/rc.local"
-	if [ -f ${wfile} ] ; then
-		sed -i -e '$iip link set can0 up type can bitrate 125000' ${wfile}
-		sed -i -e '$ipon' ${wfile}
-		sed -i -e '$i/usr/bin/autossh -M0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 3" -p 22 root@114.215.139.157  -R 0:localhost:22  -C -N -f -g' ${wfile}
+	if [ -f /etc/rc.local ] ; then
+		sed -i -e '$iip link set can0 up type can bitrate 125000' /etc/rc.local
+		sed -i -e '$ipon' /etc/rc.local
+		sed -i -e '$i/usr/bin/autossh -M0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 3" -p 22 root@114.215.139.157  -R 0:localhost:22  -C -N -f -g' /etc/rc.local
 	fi	
 }
 
