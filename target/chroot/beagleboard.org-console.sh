@@ -617,10 +617,7 @@ install_hsbms () {
 	fi
 
 	# /etc/rc/local
-<<<<<<< HEAD
 	echo "Configure /etc/rc.local"
-=======
->>>>>>> eadff3997d9b74b3fe84a99a0add02dd7963f357
 	wfile = "/etc/rc.local"
 	if [ -f ${wfile} ] ; then
 		sed -i -e '$iip link set can0 up type can bitrate 125000' ${wfile}
