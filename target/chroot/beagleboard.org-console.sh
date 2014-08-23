@@ -544,7 +544,7 @@ install_hsbms () {
 
 	# Get latest HyperStrong EV Application to /root/hyperstrong
 	echo "Installing HyperStrong apps(supervisor_capture_log gps remote etc)"
-	mkdir -p /root/hyperstrong/data
+	#mkdir -p /root/hyperstrong/data
 	git_repo="https://github.com/hankchan/bbb_hs_ev_app.git"
 	git_target_dir="/root/hyperstrong/"
 	git_clone
