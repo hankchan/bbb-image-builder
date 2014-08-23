@@ -543,11 +543,13 @@ unsecure_root () {
 install_hsbms () {
 
 	# Get latest HyperStrong EV Application to /root/hyperstrong
+	echo "Installing HyperStrong apps(supervisor_capture_log gps remote etc)"
 	mkdir -p /root/hyperstrong/data
 	git_repo="https://github.com/hankchan/bbb_hs_ev_app.git"
 	git_target_dir="/root/hyperstrong/"
 	git_clone
 
+	echo "Add Configure file for supervisor"
 	# supervisor conf 
 	wfile="/etc/supervisor/conf.d/hs_bbb.conf"
 	echo "[program:hs_bbb_capture]" > ${wfile}
@@ -596,9 +598,11 @@ install_hsbms () {
 	echo "stdout_logfile_backups=0" >> ${wfile}
 
 	# crontab ntpdate 
+	echo "Add crontab task"
 	echo "*/10 * * * * ntpdate -u 1.cn.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org" | crontab -
 
 	# ppp
+	echo "Configure ppp"
 	wfile = "/etc/ppp/peers/provider"
 	if [ -f ${wfile}] ; then
 		sed -i -e 's:/dev/modem:/dev/ttyO2:g' ${wfile}
@@ -613,7 +617,8 @@ install_hsbms () {
 	fi
 
 	# /etc/rc/local
-	wfile = "/etc/rc/local"
+	echo "Configure /etc/rc.local"
+	wfile = "/etc/rc.local"
 	if [ -f ${wfile} ] ; then
 		sed -i -e '$iip link set can0 up type can bitrate 125000' ${wfile}
 		sed -i -e '$ipon' ${wfile}
