@@ -608,7 +608,7 @@ install_hsbms () {
 	echo "Configure ppp"
 	if [ -f /etc/ppp/peers/provider ] ; then
 		sed -i -e 's:/dev/modem:/dev/ttyO2:g' /etc/ppp/peers/provider
-		sed -i -e 's:"\*\*\*\*\*\*\*\*":"\*99\*\*\*1#:g' /etc/ppp/peers/provider
+		sed -i -e 's:\*\*\*\*\*\*\*\*:\*99\*\*\*1#:g' /etc/ppp/peers/provider
 	fi
 	if [ -f /etc/chatscripts/pap ] ; then
 		sed -i -e '/ATZ/aOK              AT+CGDCONT=1,"IP","3gnet",,0,0' /etc/chatscripts/pap
