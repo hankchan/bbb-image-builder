@@ -624,6 +624,13 @@ install_hsbms () {
 		sed -i -e '$ipon' /etc/rc.local
 		sed -i -e '$i/usr/bin/autossh -M0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 3" -p 22 root@114.215.139.157  -R 0:localhost:22  -C -N -f -g' /etc/rc.local
 	fi	
+	
+	# ssh port forwading
+	echo "Configure SSH port forwading"
+	ssh-keygen -t rsa
+	if [ -f /root/.ssh/id_rsa ] ; then
+	        ssh-copy-id -i /root/.ssh/id_rsa.pub  root@114.215.139.157
+	fi
 }
 
 is_this_qemu
