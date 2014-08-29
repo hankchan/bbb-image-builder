@@ -556,7 +556,7 @@ install_hsbms () {
 	if [ -d /root/hyperstrong ] ; then
 	        mkdir -p /root/hyperstrong/data
 	        chmod a+x /root/hyperstrong/hs_bbb_*
-	        cp HS-CAN-00A0.dtbo /lib/firmware
+	        mv HS-CAN-00A0.dtbo /lib/firmware
 	fi
 	
         echo "HS: Loading custom capes"
