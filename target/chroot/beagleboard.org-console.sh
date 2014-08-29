@@ -541,18 +541,30 @@ unsecure_root () {
 }
 
 install_hsbms () {
+	
+	systemctl enable multi-user.target
+	
+	echo "HS: Timezone"
+	echo "Asia/Harbin" > /etc/timezone 
+        dpkg-reconfigure -f noninteractive tzdata
 
 	# Get latest HyperStrong EV Application to /root/hyperstrong
-	echo "Installing HyperStrong apps(supervisor_capture_log gps remote etc)"
+	echo "HS:Installing HyperStrong apps(supervisor_capture_log gps remote etc)"
 	git_repo="https://github.com/hankchan/bbb_hs_ev_app.git"
 	git_target_dir="/root/hyperstrong/"
 	git_clone
 	if [ -d /root/hyperstrong ] ; then
 	        mkdir -p /root/hyperstrong/data
 	        chmod a+x /root/hyperstrong/hs_bbb_*
+	        cp HS-CAN-00A0.dtbo /lib/firmware
 	fi
+	
+        echo "HS: Loading custom capes"
+     	if [ -f /etc/default/capemgr ] ; then
+                sed -i -e 's:CAPE=:CAPE=HS-CAN:g' /etc/default/capemgr
+	fi   
 
-	echo "Add Configure file for supervisor"
+	echo "HS: Add Configure file for supervisor"
 	# supervisor conf 
 	wfile="/etc/supervisor/conf.d/hs_bbb.conf"
 	echo "[program:hs_bbb_capture]" > ${wfile}
@@ -620,7 +632,12 @@ install_hsbms () {
 	# /etc/rc/local
 	echo "Configure /etc/rc.local"
 	if [ -f /etc/rc.local ] ; then
-		sed -i -e '$iip link set can0 up type can bitrate 125000' /etc/rc.local
+		sed -i -e '$iip link set can0 type can bitrate 125000' /etc/rc.local
+		sed -i -e '$iip link set can1 type can bitrate 125000' /etc/rc.local
+		sed -i -e '$iip link set can2 type can bitrate 125000' /etc/rc.local
+		sed -i -e '$iip link set can0 up' /etc/rc.local
+		sed -i -e '$iip link set can1 up' /etc/rc.local
+		sed -i -e '$iip link set can2 up' /etc/rc.local
 		sed -i -e '$ipon' /etc/rc.local
 		sed -i -e '$i/usr/bin/autossh -M0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 3" -p 22 root@114.215.139.157  -R 0:localhost:22  -C -N -f -g' /etc/rc.local
 	fi	
