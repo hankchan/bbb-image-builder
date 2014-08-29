@@ -549,7 +549,7 @@ install_hsbms () {
         dpkg-reconfigure -f noninteractive tzdata
 
 	# Get latest HyperStrong EV Application to /root/hyperstrong
-	echo "HS:Installing HyperStrong apps(supervisor_capture_log gps remote etc)"
+	echo "HS: Installing HyperStrong apps(supervisor_capture_log gps remote etc)"
 	git_repo="https://github.com/hankchan/bbb_hs_ev_app.git"
 	git_target_dir="/root/hyperstrong/"
 	git_clone
@@ -613,11 +613,11 @@ install_hsbms () {
 	echo "stdout_logfile_backups=0" >> ${wfile}
 
 	# crontab ntpdate 
-	echo "Add crontab task"
+	echo "HS: Add crontab task"
 	echo "*/10 * * * * ntpdate -u 1.cn.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org" | crontab -
 
 	# ppp
-	echo "Configure ppp"
+	echo "HS: Configure ppp"
 	if [ -f /etc/ppp/peers/provider ] ; then
 		sed -i -e 's:/dev/modem:/dev/ttyO2:g' /etc/ppp/peers/provider
 		sed -i -e 's:\*\*\*\*\*\*\*\*:\*99\*\*\*1#:g' /etc/ppp/peers/provider
@@ -630,7 +630,7 @@ install_hsbms () {
 	fi
 
 	# /etc/rc/local
-	echo "Configure /etc/rc.local"
+	echo "HS: Configure /etc/rc.local"
 	if [ -f /etc/rc.local ] ; then
 		sed -i -e '$iip link set can0 type can bitrate 125000' /etc/rc.local
 		sed -i -e '$iip link set can1 type can bitrate 125000' /etc/rc.local
@@ -643,7 +643,7 @@ install_hsbms () {
 	fi	
 	
 	# ssh port forwading
-	echo "Configure SSH port forwading"
+	echo "HS: Configure SSH port forwading"
 	ssh-keygen -t rsa
 	if [ -f /root/.ssh/id_rsa ] ; then
 	        ssh-copy-id -i /root/.ssh/id_rsa.pub  root@114.215.139.157
