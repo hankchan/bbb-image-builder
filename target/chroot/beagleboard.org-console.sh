@@ -542,6 +542,7 @@ unsecure_root () {
 
 install_hsbms () {
 	
+	echo "HS: systemctl enable multi-user.target"
 	systemctl enable multi-user.target
 	
 	echo "HS: Timezone"
@@ -556,7 +557,7 @@ install_hsbms () {
 	if [ -d /root/hyperstrong ] ; then
 	        mkdir -p /root/hyperstrong/data
 	        chmod a+x /root/hyperstrong/hs_bbb_*
-	        mv HS-CAN-00A0.dtbo /lib/firmware
+	        cp /root/hyperstrong/HS-CAN-00A0.dtbo /lib/firmware
 	fi
 	
         echo "HS: Loading custom capes"
