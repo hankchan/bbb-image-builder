@@ -659,10 +659,10 @@ install_hsbms () {
 		sed -i -e 's:\*\*\*\*\*\*\*\*:\*99\*\*\*1#:g' /etc/ppp/peers/provider
 	fi
 	if [ -f /etc/chatscripts/pap ] ; then
-		sed -i -e '/ATZ/aOK              AT+CGDCONT=1,"IP","3gnet",,0,0' /etc/chatscripts/pap
-		sed -i -e '/CGDCONT/aOK              AT+CGPSPWR=1' /etc/chatscripts/pap
+		sed -i -e '/ATZ/aOK              AT+CGPSPWR=1' /etc/chatscripts/pap
 		sed -i -e '/CGPSPWR/aOK              AT+CGPSRST=1' /etc/chatscripts/pap
 		sed -i -e '/CGPSRST/aOK              AT+CGPSIPR=115200' /etc/chatscripts/pap
+                sed -i -e '/CGPSIPR/aOK              AT+CGDCONT=1,"IP","3gnet",,0,0' /etc/chatscripts/pap
 	fi
 
 	# /etc/rc/local
