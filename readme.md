@@ -1,4 +1,5 @@
-Beaglebone Black SD安装镜像:
+HS BeagleBoard branch:
+------------
 
 1.下载源代码
 git clone https://github.com/hankchan/bbb_sd_image_builder.git

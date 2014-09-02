@@ -575,117 +575,6 @@ unsecure_root () {
 	fi
 }
 
-install_hsbms () {
-	
-	echo "HS: systemctl enable multi-user.target"
-	systemctl enable multi-user.target
-	
-	echo "HS: Timezone"
-	echo "Asia/Harbin" > /etc/timezone 
-        dpkg-reconfigure -f noninteractive tzdata
-
-	# Get latest HyperStrong EV Application to /root/hyperstrong
-	echo "HS: Installing HyperStrong apps(supervisor_capture_log gps remote etc)"
-	git_repo="https://github.com/hankchan/bbb_hs_ev_app.git"
-	git_target_dir="/root/hyperstrong/"
-	git_clone
-	if [ -d /root/hyperstrong ] ; then
-	        mkdir -p /root/hyperstrong/data
-	        chmod a+x /root/hyperstrong/hs_bbb_*
-	        cp /root/hyperstrong/HS-CAN-00A0.dtbo /lib/firmware
-	fi
-	
-        echo "HS: Loading custom capes"
-     	if [ -f /etc/default/capemgr ] ; then
-                sed -i -e 's:CAPE=:CAPE=HS-CAN:g' /etc/default/capemgr
-	fi   
-
-	echo "HS: Add Configure file for supervisor"
-	# supervisor conf 
-	wfile="/etc/supervisor/conf.d/hs_bbb.conf"
-	echo "[program:hs_bbb_capture]" > ${wfile}
-	echo "command=/root/hyperstrong/hs_bbb_capture" >> ${wfile}
-	echo "directory=/root/hyperstrong/" >> ${wfile}
-	echo "autostart=true" >> ${wfile}
-	echo "autorestart=true" >> ${wfile}
-	echo "startsecs=1" >> ${wfile}
-	echo "startretries=1000" >> ${wfile}
-	echo "redirect_stderr=true" >> ${wfile}
-	echo "stdout_logfile=/root/hyperstrong/supervisor_capture_log.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=4MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "stderr_logfile=/root/hyperstrong/supervisor_capture_err.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "" >> ${wfile}
-	echo "[program:hs_bbb_gps]" >> ${wfile}
-	echo "command=/root/hyperstrong/hs_bbb_gps" >> ${wfile}
-	echo "directory=/root/hyperstrong/" >> ${wfile}
-	echo "autostart=true" >> ${wfile}
-	echo "autorestart=true" >> ${wfile}
-	echo "startsecs=1" >> ${wfile}
-	echo "startretries=1000" >> ${wfile}
-	echo "redirect_stderr=true" >> ${wfile}
-	echo "stdout_logfile=/root/hyperstrong/supervisor_gps_log.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=4MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "stderr_logfile=/root/hyperstrong/supervisor_gps_err.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "" >> ${wfile}
-	echo "[program:hs_bbb_remote]" >> ${wfile}
-	echo "command=/root/hyperstrong/hs_bbb_remote" >> ${wfile}
-	echo "directory=/root/hyperstrong/" >> ${wfile}
-	echo "autostart=true" >> ${wfile}
-	echo "autorestart=true" >> ${wfile}
-	echo "startsecs=1" >> ${wfile}
-	echo "startretries=1000" >> ${wfile}
-	echo "redirect_stderr=true" >> ${wfile}
-	echo "stdout_logfile=/root/hyperstrong/supervisor_remote_log.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=4MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "stderr_logfile=/root/hyperstrong/supervisor_remote_err.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-
-	# crontab ntpdate 
-	echo "HS: Add crontab task"
-	echo "*/10 * * * * ntpdate -u 1.cn.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org" | crontab -
-
-	# ppp
-	echo "HS: Configure ppp"
-	if [ -f /etc/ppp/peers/provider ] ; then
-		sed -i -e 's:/dev/modem:/dev/ttyO2:g' /etc/ppp/peers/provider
-		sed -i -e 's:\*\*\*\*\*\*\*\*:\*99\*\*\*1#:g' /etc/ppp/peers/provider
-	fi
-	if [ -f /etc/chatscripts/pap ] ; then
-		sed -i -e '/ATZ/aOK              AT+CGDCONT=1,"IP","3gnet",,0,0' /etc/chatscripts/pap
-		sed -i -e '/CGDCONT/aOK              AT+CGPSPWR=1' /etc/chatscripts/pap
-		sed -i -e '/CGPSPWR/aOK              AT+CGPSRST=1' /etc/chatscripts/pap
-		sed -i -e '/CGPSRST/aOK              AT+CGPSIPR=115200' /etc/chatscripts/pap
-	fi
-
-	# /etc/rc/local
-	echo "HS: Configure /etc/rc.local"
-	if [ -f /etc/rc.local ] ; then
-		sed -i -e '$iip link set can0 type can bitrate 125000' /etc/rc.local
-		sed -i -e '$iip link set can1 type can bitrate 125000' /etc/rc.local
-		sed -i -e '$iip link set can2 type can bitrate 125000' /etc/rc.local
-		sed -i -e '$iip link set can0 up' /etc/rc.local
-		sed -i -e '$iip link set can1 up' /etc/rc.local
-		sed -i -e '$iip link set can2 up' /etc/rc.local
-		sed -i -e '$ipon' /etc/rc.local
-		sed -i -e '$i/usr/bin/autossh -M0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 3" -p 22 root@114.215.139.157  -R 0:localhost:22  -C -N -f -g' /etc/rc.local
-	fi	
-	
-	# ssh port forwading
-	echo "HS: Configure SSH port forwading"
-	ssh-keygen -t rsa
-	if [ -f /root/.ssh/id_rsa ] ; then
-	        ssh-copy-id -i /root/.ssh/id_rsa.pub  root@114.215.139.157
-	fi
-}
-
 is_this_qemu
 
 #install_picky_packages
@@ -693,15 +582,13 @@ is_this_qemu
 setup_system
 setup_desktop
 
-install_hsbms
-
-#install_node_pkgs
-#install_pip_pkgs
-#install_gem_pkgs
+install_node_pkgs
+install_pip_pkgs
+install_gem_pkgs
 if [ -f /usr/bin/git ] ; then
 	install_git_repos
 fi
-#install_build_pkgs
+install_build_pkgs
 install_kernel_modules
 other_source_links
 unsecure_root
