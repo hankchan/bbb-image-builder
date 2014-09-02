@@ -655,7 +655,7 @@ install_hsbms () {
 	# ppp
 	echo "HS: Configure ppp"
 	if [ -f /etc/ppp/peers/provider ] ; then
-		sed -i -e 's:/dev/modem:/dev/ttyO2:g' /etc/ppp/peers/provider
+		sed -i -e 's:/dev/modem:/dev/ttyO5:g' /etc/ppp/peers/provider
 		sed -i -e 's:\*\*\*\*\*\*\*\*:\*99\*\*\*1#:g' /etc/ppp/peers/provider
 	fi
 	if [ -f /etc/chatscripts/pap ] ; then
