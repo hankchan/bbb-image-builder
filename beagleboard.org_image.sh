@@ -3,8 +3,8 @@
 time=$(date +%Y-%m-%d)
 DIR="$PWD"
 
-./RootStock-NG.sh -c bb.org-debian-stable
-./RootStock-NG.sh -c bb.org-debian-stable-4gb
+#./RootStock-NG.sh -c bb.org-debian-stable
+#./RootStock-NG.sh -c bb.org-debian-stable-4gb
 ./RootStock-NG.sh -c bb.org-console-debian-stable
 
 debian_lxde_stable="debian-7.6-lxde-armhf-${time}"
