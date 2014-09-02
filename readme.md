@@ -4,17 +4,21 @@ HS BeagleBoard branch:
 ------------
 
 1.下载源代码:
-git clone https://github.com/hankchan/bbb_sd_image_builder.git
+
+    git clone https://github.com/hankchan/bbb_sd_image_builder.git
 
 2.更新源代码:
-git pull
+
+    git pull
 
 3.执行自定义编译脚本:
-sudo ./beagleboard.org_image.sh
+
+    sudo ./beagleboard.org_image.sh
 
 4.生成SD文件:
-cd deploy
-sudo ./gift_wrap_final_images.sh
+
+    cd deploy
+    sudo ./gift_wrap_final_images.sh
 
 BeagleBoard branch:
 ------------
