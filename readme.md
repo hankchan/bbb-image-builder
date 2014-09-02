@@ -1,3 +1,5 @@
+Scripts to support customized image generation for many arm systems
+
 HS BeagleBoard branch:
 ------------
 
@@ -13,11 +15,6 @@ sudo ./beagleboard.org_image.sh
 4.生成SD文件:
 cd deploy
 sudo ./gift_wrap_final_images.sh
-
-********
-
-
-Scripts to support customized image generation for many arm systems
 
 BeagleBoard branch:
 ------------
