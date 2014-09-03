@@ -585,68 +585,20 @@ install_hsbms () {
         dpkg-reconfigure -f noninteractive tzdata
 
 	# Get latest HyperStrong EV Application to /root/hyperstrong
-	echo "HS: Installing HyperStrong apps(supervisor_capture_log gps remote etc)"
+	echo "HS: Installing HyperStrong apps(capture gps remote etc)"
 	git_repo="https://github.com/hankchan/bbb_hs_ev_app.git"
 	git_target_dir="/root/hyperstrong/"
 	git_clone
 	if [ -d /root/hyperstrong ] ; then
-	        mkdir -p /root/hyperstrong/data
 	        chmod a+x /root/hyperstrong/hs_bbb_*
-	        cp /root/hyperstrong/HS-CAN-00A0.dtbo /lib/firmware
+	        cp /root/hyperstrong/config/HS-CAN-00A0.dtbo /lib/firmware
+                cp /root/hyperstrong/config/hs_bbb.conf /etc/supervisor/conf.d
 	fi
 	
         echo "HS: Loading custom capes"
      	if [ -f /etc/default/capemgr ] ; then
                 sed -i -e 's:CAPE=:CAPE=HS-CAN:g' /etc/default/capemgr
-	fi   
-
-	echo "HS: Add Configure file for supervisor"
-	# supervisor conf 
-	wfile="/etc/supervisor/conf.d/hs_bbb.conf"
-	echo "[program:hs_bbb_capture]" > ${wfile}
-	echo "command=/root/hyperstrong/hs_bbb_capture" >> ${wfile}
-	echo "directory=/root/hyperstrong/" >> ${wfile}
-	echo "autostart=true" >> ${wfile}
-	echo "autorestart=true" >> ${wfile}
-	echo "startsecs=1" >> ${wfile}
-	echo "startretries=1000" >> ${wfile}
-	echo "redirect_stderr=true" >> ${wfile}
-	echo "stdout_logfile=/root/hyperstrong/supervisor_capture_log.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=4MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "stderr_logfile=/root/hyperstrong/supervisor_capture_err.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "" >> ${wfile}
-	echo "[program:hs_bbb_gps]" >> ${wfile}
-	echo "command=/root/hyperstrong/hs_bbb_gps" >> ${wfile}
-	echo "directory=/root/hyperstrong/" >> ${wfile}
-	echo "autostart=true" >> ${wfile}
-	echo "autorestart=true" >> ${wfile}
-	echo "startsecs=1" >> ${wfile}
-	echo "startretries=1000" >> ${wfile}
-	echo "redirect_stderr=true" >> ${wfile}
-	echo "stdout_logfile=/root/hyperstrong/supervisor_gps_log.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=4MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "stderr_logfile=/root/hyperstrong/supervisor_gps_err.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "" >> ${wfile}
-	echo "[program:hs_bbb_remote]" >> ${wfile}
-	echo "command=/root/hyperstrong/hs_bbb_remote" >> ${wfile}
-	echo "directory=/root/hyperstrong/" >> ${wfile}
-	echo "autostart=true" >> ${wfile}
-	echo "autorestart=true" >> ${wfile}
-	echo "startsecs=1" >> ${wfile}
-	echo "startretries=1000" >> ${wfile}
-	echo "redirect_stderr=true" >> ${wfile}
-	echo "stdout_logfile=/root/hyperstrong/supervisor_remote_log.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=4MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
-	echo "stderr_logfile=/root/hyperstrong/supervisor_remote_err.txt" >> ${wfile}
-	echo "stdout_logfile_maxbytes=1MB" >> ${wfile}
-	echo "stdout_logfile_backups=0" >> ${wfile}
+	fi	
 
 	# crontab ntpdate 
 	echo "HS: Add crontab task"
