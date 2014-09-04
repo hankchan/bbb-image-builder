@@ -42,13 +42,20 @@ start|reload|force-reload|restart)
 			rm -f /etc/ssh/ssh.regenerate || true
 			sync
 		fi
+		if [ -f /etc/init.d/ssh ] ; then
+			/etc/init.d/ssh restart
+		fi
 	fi
 
 	#Resize drive when requested
 	if [ -f /resizerootfs ] ; then
 		drive=$(cat /resizerootfs)
-		if [ "x${drive}" = "x/dev/mmcblk0" ] || [ "x${drive}" = "x/dev/mmcblk1" ]; then
-			resize2fs ${drive}p2 >/var/log/resize.log 2>&1 || true
+		if [ ! "x${drive}" = "x" ] ; then
+			if [ "x${drive}" = "x/dev/mmcblk0" ] || [ "x${drive}" = "x/dev/mmcblk1" ] ; then
+				resize2fs ${drive}p2 >/var/log/resize.log 2>&1 || true
+			else
+				resize2fs ${drive} >/var/log/resize.log 2>&1 || true
+			fi
 		fi
 		rm -rf /resizerootfs || true
 	fi

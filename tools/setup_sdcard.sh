@@ -229,6 +229,46 @@ dl_bootloader () {
 	fi
 }
 
+generate_soc () {
+	echo "#!/bin/sh" > ${wfile}
+	echo "format=1.0" >> ${wfile}
+	echo "" >> ${wfile}
+	if [ ! "x${conf_bootloader_in_flash}" = "xenable" ] ; then
+		echo "board=${board}" >> ${wfile}
+		echo "" >> ${wfile}
+		echo "bootloader_location=${bootloader_location}" >> ${wfile}
+		echo "" >> ${wfile}
+		echo "dd_spl_uboot_count=${dd_spl_uboot_count}" >> ${wfile}
+		echo "dd_spl_uboot_seek=${dd_spl_uboot_seek}" >> ${wfile}
+		echo "dd_spl_uboot_conf=${dd_spl_uboot_conf}" >> ${wfile}
+		echo "dd_spl_uboot_bs=${dd_spl_uboot_bs}" >> ${wfile}
+		echo "dd_spl_uboot_backup=/opt/backup/uboot/${spl_uboot_name}" >> ${wfile}
+		echo "" >> ${wfile}
+		echo "dd_uboot_count=${dd_uboot_count}" >> ${wfile}
+		echo "dd_uboot_seek=${dd_uboot_seek}" >> ${wfile}
+		echo "dd_uboot_conf=${dd_uboot_conf}" >> ${wfile}
+		echo "dd_uboot_bs=${dd_uboot_bs}" >> ${wfile}
+		echo "dd_uboot_backup=/opt/backup/uboot/${uboot_name}" >> ${wfile}
+	else
+		echo "uboot_CONFIG_CMD_BOOTZ=${uboot_CONFIG_CMD_BOOTZ}" >> ${wfile}
+		echo "uboot_CONFIG_SUPPORT_RAW_INITRD=${uboot_CONFIG_SUPPORT_RAW_INITRD}" >> ${wfile}
+		echo "uboot_CONFIG_CMD_FS_GENERIC=${uboot_CONFIG_CMD_FS_GENERIC}" >> ${wfile}
+		echo "zreladdr=${conf_zreladdr}" >> ${wfile}
+	fi
+	echo "" >> ${wfile}
+	echo "boot_fstype=${conf_boot_fstype}" >> ${wfile}
+	echo "conf_boot_startmb=${conf_boot_startmb}" >> ${wfile}
+	echo "conf_boot_endmb=${conf_boot_endmb}" >> ${wfile}
+	echo "sfdisk_fstype=${sfdisk_fstype}" >> ${wfile}
+	echo "" >> ${wfile}
+	echo "#Kernel" >> ${wfile}
+	echo "dtb=${dtb}" >> ${wfile}
+	echo "serial_tty=${SERIAL}" >> ${wfile}
+	echo "usbnet_mem=${usbnet_mem}" >> ${wfile}
+
+	echo "" >> ${wfile}
+}
+
 drive_error_ro () {
 	echo "-----------------------------"
 	echo "Error: for some reason your SD card is not writable..."
@@ -255,6 +295,7 @@ unmount_all_drive_partitions () {
 	done
 
 	echo "Zeroing out Partition Table"
+	echo "-----------------------------"
 	dd if=/dev/zero of=${media} bs=1M count=100 || drive_error_ro
 	sync
 	dd if=${media} of=/dev/null bs=1M count=100
@@ -262,10 +303,6 @@ unmount_all_drive_partitions () {
 }
 
 sfdisk_partition_layout () {
-	echo ""
-	echo "Using sfdisk to create partition layout"
-	echo "-----------------------------"
-
 	LC_ALL=C sfdisk --force --in-order --Linux --unit M "${media}" <<-__EOF__
 		${conf_boot_startmb},${conf_boot_endmb},${sfdisk_fstype},*
 		,,,-
@@ -275,34 +312,59 @@ sfdisk_partition_layout () {
 }
 
 sfdisk_single_partition_layout () {
-	echo ""
-	echo "Using sfdisk to create partition layout"
-	echo "-----------------------------"
-
 	LC_ALL=C sfdisk --force --in-order --Linux --unit M "${media}" <<-__EOF__
-		${conf_boot_startmb},,${sfdisk_fstype},-
+		${conf_boot_startmb},,${sfdisk_fstype},*
 	__EOF__
 
 	sync
 }
 
 dd_uboot_boot () {
-	#For: Freescale: i.mx5/6 Devices
-	echo ""
-	echo "Using dd to place bootloader on drive"
+	unset dd_uboot
+	if [ ! "x${dd_uboot_count}" = "x" ] ; then
+		dd_uboot="${dd_uboot}count=${dd_uboot_count} "
+	fi
+
+	if [ ! "x${dd_uboot_seek}" = "x" ] ; then
+		dd_uboot="${dd_uboot}seek=${dd_uboot_seek} "
+	fi
+
+	if [ ! "x${dd_uboot_conf}" = "x" ] ; then
+		dd_uboot="${dd_uboot}conv=${dd_uboot_conf} "
+	fi
+
+	if [ ! "x${dd_uboot_bs}" = "x" ] ; then
+		dd_uboot="${dd_uboot}bs=${dd_uboot_bs}"
+	fi
+
+	echo "${uboot_name}: dd if=${uboot_name} of=${media} ${dd_uboot}"
 	echo "-----------------------------"
-	dd if=${TEMPDIR}/dl/${UBOOT} of=${media} seek=${dd_uboot_seek} bs=${dd_uboot_bs}
-	bootloader_installed=1
+	dd if=${TEMPDIR}/dl/${UBOOT} of=${media} ${dd_uboot}
+	echo "-----------------------------"
 }
 
 dd_spl_uboot_boot () {
-	#For: Samsung: Exynos 4 Devices
-	echo ""
-	echo "Using dd to place bootloader on drive"
+	unset dd_spl_uboot
+	if [ ! "x${dd_spl_uboot_count}" = "x" ] ; then
+		dd_spl_uboot="${dd_spl_uboot}count=${dd_spl_uboot_count} "
+	fi
+
+	if [ ! "x${dd_spl_uboot_seek}" = "x" ] ; then
+		dd_spl_uboot="${dd_spl_uboot}seek=${dd_spl_uboot_seek} "
+	fi
+
+	if [ ! "x${dd_spl_uboot_conf}" = "x" ] ; then
+		dd_spl_uboot="${dd_spl_uboot}conv=${dd_spl_uboot_conf} "
+	fi
+
+	if [ ! "x${dd_spl_uboot_bs}" = "x" ] ; then
+		dd_spl_uboot="${dd_spl_uboot}bs=${dd_spl_uboot_bs}"
+	fi
+
+	echo "${spl_uboot_name}: dd if=${spl_uboot_name} of=${media} ${dd_spl_uboot}"
 	echo "-----------------------------"
-	dd if=${TEMPDIR}/dl/${UBOOT} of=${media} seek=${dd_spl_uboot_seek} bs=${dd_spl_uboot_bs}
-	dd if=${TEMPDIR}/dl/${UBOOT} of=${media} seek=${dd_uboot_seek} bs=${dd_uboot_bs}
-	bootloader_installed=1
+	dd if=${TEMPDIR}/dl/${SPL} of=${media} ${dd_spl_uboot}
+	echo "-----------------------------"
 }
 
 format_partition_error () {
@@ -360,20 +422,43 @@ create_partitions () {
 	media_boot_partition=1
 	media_rootfs_partition=2
 
+	echo ""
 	case "${bootloader_location}" in
 	fatfs_boot)
+		conf_boot_endmb=${conf_boot_endmb:-"12"}
+		echo "Using sfdisk to create partition layout"
+		echo "Version: `LC_ALL=C sfdisk --version`"
+		echo "-----------------------------"
 		sfdisk_partition_layout
 		;;
 	dd_uboot_boot)
+		echo "Using dd to place bootloader on drive"
+		echo "-----------------------------"
 		dd_uboot_boot
+		bootloader_installed=1
 		sfdisk_single_partition_layout
 		media_rootfs_partition=1
 		;;
 	dd_spl_uboot_boot)
+		echo "Using dd to place bootloader on drive"
+		echo "-----------------------------"
 		dd_spl_uboot_boot
-		sfdisk_partition_layout
+		dd_uboot_boot
+		bootloader_installed=1
+		if [ "x${bborg_production}" = "xenable" ] ; then
+			conf_boot_endmb="96"
+			conf_boot_fstype="fat"
+			sfdisk_fstype="0xE"
+			sfdisk_partition_layout
+		else
+			sfdisk_single_partition_layout
+			media_rootfs_partition=1
+		fi
 		;;
 	*)
+		echo "Using sfdisk to create partition layout"
+		echo "Version: `LC_ALL=C sfdisk --version`"
+		echo "-----------------------------"
 		sfdisk_partition_layout
 		;;
 	esac
@@ -421,7 +506,7 @@ create_partitions () {
 }
 
 boot_git_tools () {
-	if [ ! "${offline}" ] && [ "${bborg_production}" ] ; then
+	if [ ! "${offline}" ] && [ "x${bborg_production}" = "xenable" ] ; then
 
 		if [ "x${conf_board}" = "xam335x_boneblack" ] || [ "x${conf_board}" = "xam335x_evm" ] ; then
 
@@ -502,16 +587,19 @@ populate_boot () {
 		exit
 	fi
 
-	if [ ! "${bootloader_installed}" ] ; then
-		if [ "${spl_name}" ] ; then
-			if [ -f ${TEMPDIR}/dl/${SPL} ] ; then
+	if [ "${spl_name}" ] ; then
+		if [ -f ${TEMPDIR}/dl/${SPL} ] ; then
+			if [ ! "${bootloader_installed}" ] ; then
 				cp -v ${TEMPDIR}/dl/${SPL} ${TEMPDIR}/disk/${spl_name}
 				echo "-----------------------------"
 			fi
 		fi
+	fi
 
-		if [ "${boot_name}" ] ; then
-			if [ -f ${TEMPDIR}/dl/${UBOOT} ] ; then
+
+	if [ "${boot_name}" ] ; then
+		if [ -f ${TEMPDIR}/dl/${UBOOT} ] ; then
+			if [ ! "${bootloader_installed}" ] ; then
 				cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/${boot_name}
 				echo "-----------------------------"
 			fi
@@ -545,11 +633,10 @@ populate_boot () {
 		echo "loaduEnvtxt=load mmc 0:${media_rootfs_partition} \${loadaddr} /boot/uEnv.txt ; env import -t \${loadaddr} \${filesize};" >> ${wfile}
 		echo "loadall=run loaduEnvtxt; run loadximage; run loadxrd; run loadxfdt;" >> ${wfile}
 		echo "" >> ${wfile}
-		echo "mmcargs=setenv bootargs console=tty0 console=\${console} \${optargs} \${cape_disable} \${cape_enable} root=\${mmcroot} rootfstype=\${mmcrootfstype} \${cmdline}" >> ${wfile}
+		echo "mmcargs=setenv bootargs console=tty0 console=\${console} \${optargs} \${cape_disable} \${cape_enable} root=/dev/mmcblk0p${media_rootfs_partition} rootfstype=\${mmcrootfstype} \${cmdline}" >> ${wfile}
 		echo "" >> ${wfile}
 		echo "uenvcmd=run loadall; run mmcargs; bootz \${loadaddr} \${rdaddr}:\${rdsize} \${fdtaddr};" >> ${wfile}
 		echo "" >> ${wfile}
-
 
 		wfile="${TEMPDIR}/disk/nfs-uEnv.txt"
 		echo "##Rename as: uEnv.txt to boot via nfs" > ${wfile}
@@ -722,8 +809,8 @@ populate_rootfs () {
 	fi
 	echo "" >> ${wfile}
 
-	if [ ! "x${conf_fdtfile}" = "x" ] ; then
-		echo "dtb=${conf_fdtfile}" >> ${wfile}
+	if [ ! "x${dtb}" = "x" ] ; then
+		echo "dtb=${dtb}" >> ${wfile}
 	else
 		echo "#dtb=" >> ${wfile}
 	fi
@@ -763,11 +850,11 @@ populate_rootfs () {
 	if [ "x${conf_board}" = "xam335x_boneblack" ] || [ "x${conf_board}" = "xam335x_evm" ] ; then
 		if [ "x${bbb_flasher}" = "xenable" ] ; then
 			echo "##enable BBB: eMMC Flasher:" >> ${wfile}
-			echo "cmdline=init=/opt/scripts/tools/eMMC/init-eMMC-flasher-v2.sh" >> ${wfile}
+			echo "cmdline=init=/opt/scripts/tools/eMMC/init-eMMC-flasher-v3.sh" >> ${wfile}
 		else
 			echo "##enable BBB: eMMC Flasher:" >> ${wfile}
 			echo "##make sure, these tools are installed: dosfstools rsync" >> ${wfile}
-			echo "#cmdline=init=/opt/scripts/tools/eMMC/init-eMMC-flasher-v2.sh" >> ${wfile}
+			echo "#cmdline=init=/opt/scripts/tools/eMMC/init-eMMC-flasher-v3.sh" >> ${wfile}
 		fi
 		echo "" >> ${wfile}
 	fi
@@ -779,32 +866,8 @@ populate_rootfs () {
 		board=${conf_board}
 	fi
 
-	#This should be compatible with hwpacks variable names..
-	#https://code.launchpad.net/~linaro-maintainers/linaro-images/
-	cat > ${TEMPDIR}/disk/boot/SOC.sh <<-__EOF__
-		#!/bin/sh
-		format=1.0
-		board=${board}
-
-		bootloader_location=${bootloader_location}
-		dd_spl_uboot_seek=${dd_spl_uboot_seek}
-		dd_spl_uboot_bs=${dd_spl_uboot_bs}
-		dd_uboot_seek=${dd_uboot_seek}
-		dd_uboot_bs=${dd_uboot_bs}
-
-		conf_bootcmd=${conf_bootcmd}
-		boot_script=${boot_script}
-		boot_fstype=${conf_boot_fstype}
-		conf_boot_startmb=${conf_boot_startmb}
-		conf_boot_endmb=${conf_boot_endmb}
-		sfdisk_fstype=${sfdisk_fstype}
-
-		serial_tty=${SERIAL}
-		fdtfile=${conf_fdtfile}
-
-		usbnet_mem=${usbnet_mem}
-
-	__EOF__
+	wfile="${TEMPDIR}/disk/boot/SOC.sh"
+	generate_soc
 
 	#RootStock-NG
 	if [ -f ${TEMPDIR}/disk/etc/rcn-ee.conf ] ; then
@@ -892,12 +955,23 @@ populate_rootfs () {
 		echo "    network 192.168.7.0" >> ${wfile}
 		echo "    gateway 192.168.7.1" >> ${wfile}
 
-		if [ ! "${bborg_production}" ] ; then
+		if [ ! "x${bborg_production}" = "xenable" ] ; then
 			rm -f ${TEMPDIR}/disk/var/www/index.html || true
 		fi
 		sync
 
 	fi #RootStock-NG
+
+	if [ ! "x${uboot_name}" = "x" ] ; then
+		echo "Backup version of u-boot: /opt/backup/uboot/"
+		mkdir -p ${TEMPDIR}/disk/opt/backup/uboot/
+		cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/opt/backup/uboot/${uboot_name}
+	fi
+
+	if [ ! "x${spl_uboot_name}" = "x" ] ; then
+		mkdir -p ${TEMPDIR}/disk/opt/backup/uboot/
+		cp -v ${TEMPDIR}/dl/${SPL} ${TEMPDIR}/disk/opt/backup/uboot/${spl_uboot_name}
+	fi
 
 	if [ "x${conf_board}" = "xam335x_boneblack" ] || [ "x${conf_board}" = "xam335x_evm" ] ; then
 
@@ -910,6 +984,19 @@ populate_rootfs () {
 		echo "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\"eth0\"" >> ${TEMPDIR}/disk${file}
 		echo "" >> ${TEMPDIR}/disk${file}
 
+		git_rcn_boot="https://raw.githubusercontent.com/RobertCNelson/boot-scripts/master/tools"
+
+		if [ ! -f ${TEMPDIR}/disk/opt/scripts/tools/grow_partition.sh ] ; then
+			mkdir -p ${TEMPDIR}/disk/opt/scripts/tools/
+			${dl_quiet} --directory-prefix="${TEMPDIR}/disk/opt/scripts/tools/" ${git_rcn_boot}/grow_partition.sh
+			sudo chmod +x ${TEMPDIR}/disk/opt/scripts/tools/grow_partition.sh
+		fi
+
+		if [ ! -f ${TEMPDIR}/disk/opt/scripts/tools/eMMC/init-eMMC-flasher-v3.sh ] ; then
+			mkdir -p ${TEMPDIR}/disk/opt/scripts/tools/eMMC/
+			${dl_quiet} --directory-prefix="${TEMPDIR}/disk/opt/scripts/tools/eMMC/" ${git_rcn_boot}/eMMC/init-eMMC-flasher-v3.sh
+			sudo chmod +x ${TEMPDIR}/disk/opt/scripts/tools/eMMC/init-eMMC-flasher-v3.sh
+		fi
 	fi
 
 	if [ "${usbnet_mem}" ] ; then
@@ -920,28 +1007,6 @@ populate_rootfs () {
 		http_brcm="https://raw.githubusercontent.com/Freescale/meta-fsl-arm-extra/master/recipes-bsp/broadcom-nvram-config/files/wandboard"
 		${dl_quiet} --directory-prefix="${TEMPDIR}/disk/lib/firmware/brcm/" ${http_brcm}/brcmfmac4329-sdio.txt
 		${dl_quiet} --directory-prefix="${TEMPDIR}/disk/lib/firmware/brcm/" ${http_brcm}/brcmfmac4330-sdio.txt
-	fi
-
-	if [ "x${build_img_file}" = "xenable" ] ; then
-		git_rcn_boot="https://raw.githubusercontent.com/RobertCNelson/boot-scripts/master/tools"
-
-		if [ ! -f ${TEMPDIR}/disk/opt/scripts/tools/grow_partition.sh ] ; then
-			mkdir -p ${TEMPDIR}/disk/opt/scripts/tools/
-			${dl_quiet} --directory-prefix="${TEMPDIR}/disk/opt/scripts/tools/" ${git_rcn_boot}/grow_partition.sh
-			sudo chmod +x ${TEMPDIR}/disk/opt/scripts/tools/grow_partition.sh
-		fi
-
-	fi
-
-	if [ "x${bbb_flasher}" = "xenable" ] ; then
-		git_rcn_boot="https://raw.githubusercontent.com/RobertCNelson/boot-scripts/master/tools"
-
-		if [ ! -f ${TEMPDIR}/disk/opt/scripts/tools/eMMC/init-eMMC-flasher-v2.sh ] ; then
-			mkdir -p ${TEMPDIR}/disk/opt/scripts/tools/eMMC/
-			${dl_quiet} --directory-prefix="${TEMPDIR}/disk/opt/scripts/tools/eMMC/" ${git_rcn_boot}/eMMC/init-eMMC-flasher-v2.sh
-			sudo chmod +x ${TEMPDIR}/disk/opt/scripts/tools/eMMC/init-eMMC-flasher-v2.sh
-		fi
-
 	fi
 
 	cd ${TEMPDIR}/disk/
@@ -1010,11 +1075,9 @@ process_dtb_conf () {
 	#defaults, if not set...
 	conf_boot_startmb=${conf_boot_startmb:-"1"}
 	#https://wiki.linaro.org/WorkingGroups/KernelArchived/Projects/FlashCardSurvey
-	conf_boot_endmb=${conf_boot_endmb:-"12"}
 	conf_root_device=${conf_root_device:-"/dev/mmcblk0"}
 
 	#error checking...
-
 	if [ ! "${conf_boot_fstype}" ] ; then
 		conf_boot_fstype="${ROOTFS_TYPE}"
 	fi
@@ -1202,8 +1265,7 @@ while [ ! -z "$1" ] ; do
 		bbb_flasher="enable"
 		;;
 	--beagleboard.org-production)
-		bborg_production=1
-		conf_boot_endmb="96"
+		bborg_production="enable"
 		;;
 	--bbb-old-bootloader-in-emmc)
 		bbb_old_bootloader_in_emmc="enable"
