@@ -86,11 +86,11 @@ options="--img-2gb bone-${debian_console_stable}                   --dtb beagleb
 generic_img
 
 ###archive *.tar
-base_rootfs="${debian_lxde_4gb_stable}"
-post_generic_img
+#base_rootfs="${debian_lxde_4gb_stable}"
+#post_generic_img
 
-base_rootfs="${debian_lxde_stable}"
-post_generic_img
+#base_rootfs="${debian_lxde_stable}"
+#post_generic_img
 
 base_rootfs="${debian_console_stable}"
 post_generic_img
