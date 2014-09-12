@@ -919,6 +919,20 @@ populate_rootfs () {
 			echo "iface eth0 inet dhcp" >> ${wfile}
 		fi
 
+		if [ "${ENABLE_CAN}" ] ; then
+			echo "allow-hotplug can0" >> ${wfile}
+			echo "iface can0 can static" >> ${wfile}
+			echo "    bitrate 125000" >> ${wfile}
+
+			echo "allow-hotplug can1" >> ${wfile}
+			echo "iface can1 can static" >> ${wfile}
+			echo "    bitrate 125000" >> ${wfile}
+
+			echo "allow-hotplug can2" >> ${wfile}
+			echo "iface can2 can static" >> ${wfile}
+			echo "    bitrate 125000" >> ${wfile}
+		fi
+
 		#if we have systemd & wicd-gtk, diable eth0 in /etc/network/interfaces
 		if [ -f ${TEMPDIR}/disk/lib/systemd/systemd ] ; then
 			if [ -f ${TEMPDIR}/disk/usr/bin/wicd-gtk ] ; then
