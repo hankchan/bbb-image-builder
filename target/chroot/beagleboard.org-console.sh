@@ -601,12 +601,12 @@ install_hsbms () {
 	# /etc/rc/local
 	echo "HS: Configure /etc/rc.local"
 	if [ -f /etc/rc.local ] ; then
-		sed -i -e '$iip link set can0 type can bitrate 125000' /etc/rc.local
-		sed -i -e '$iip link set can1 type can bitrate 125000' /etc/rc.local
-		sed -i -e '$iip link set can2 type can bitrate 125000' /etc/rc.local
-		sed -i -e '$iip link set can0 up' /etc/rc.local
-		sed -i -e '$iip link set can1 up' /etc/rc.local
-		sed -i -e '$iip link set can2 up' /etc/rc.local
+		#sed -i -e '$iip link set can0 type can bitrate 125000' /etc/rc.local
+		#sed -i -e '$iip link set can1 type can bitrate 125000' /etc/rc.local
+		#sed -i -e '$iip link set can2 type can bitrate 125000' /etc/rc.local
+		#sed -i -e '$iip link set can0 up' /etc/rc.local
+		#sed -i -e '$iip link set can1 up' /etc/rc.local
+		#sed -i -e '$iip link set can2 up' /etc/rc.local
 		sed -i -e '$ipon' /etc/rc.local
 		sed -i -e '$i/usr/bin/autossh -M0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 3" -p 22 root@114.215.139.157  -R 0:localhost:22  -C -N -f -g' /etc/rc.local
 	fi	
