@@ -920,17 +920,20 @@ populate_rootfs () {
 		fi
 
 		if [ "${ENABLE_CAN}" ] ; then
+		        # CANbus for BMS 
 			echo "allow-hotplug can0" >> ${wfile}
 			echo "iface can0 can static" >> ${wfile}
 			echo "    bitrate 125000" >> ${wfile}
-
+                                 
+                        # CANbus for Charger         
 			echo "allow-hotplug can1" >> ${wfile}
 			echo "iface can1 can static" >> ${wfile}
-			echo "    bitrate 125000" >> ${wfile}
+			echo "    bitrate 250000" >> ${wfile}
 
+                        # CANbus for Motor/EV
 			echo "allow-hotplug can2" >> ${wfile}
 			echo "iface can2 can static" >> ${wfile}
-			echo "    bitrate 125000" >> ${wfile}
+			echo "    bitrate 250000" >> ${wfile}
 		fi
 
 		#if we have systemd & wicd-gtk, diable eth0 in /etc/network/interfaces
