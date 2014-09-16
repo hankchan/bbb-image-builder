@@ -912,12 +912,10 @@ populate_rootfs () {
 		echo "# The primary network interface" >> ${wfile}
 
 		if [ "${DISABLE_ETH}" ] ; then
-			#echo "#auto eth0" >> ${wfile}
-			#echo "#iface eth0 inet dhcp" >> ${wfile}
-			echo "allow-hotplug eth0" >> ${wfile}
-			echo "iface eth0 inet dhcp" >> ${wfile}
+			echo "#auto eth0" >> ${wfile}
+			echo "#iface eth0 inet dhcp" >> ${wfile}
 		else
-			echo "auto eth0"  >> ${wfile}
+			echo "allow-hotplug eth0"  >> ${wfile}
 			echo "iface eth0 inet dhcp" >> ${wfile}
 		fi
 
