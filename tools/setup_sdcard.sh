@@ -631,7 +631,8 @@ populate_boot () {
 		echo "loadxfdt=load mmc 0:${media_rootfs_partition} \${fdtaddr} /boot/dtbs/\${uname_r}/\${fdtfile}" >> ${wfile}
 		echo "loadxrd=load mmc 0:${media_rootfs_partition} \${rdaddr} /boot/initrd.img-\${uname_r}; setenv rdsize \${filesize}" >> ${wfile}
 		echo "loaduEnvtxt=load mmc 0:${media_rootfs_partition} \${loadaddr} /boot/uEnv.txt ; env import -t \${loadaddr} \${filesize};" >> ${wfile}
-		echo "loadall=run loaduEnvtxt; run loadximage; run loadxrd; run loadxfdt;" >> ${wfile}
+		echo "check_dtb=if test -n \${dtb}; then setenv fdtfile \${dtb};fi;" >> ${wfile}
+		echo "loadall=run loaduEnvtxt; run check_dtb; run loadximage; run loadxrd; run loadxfdt;" >> ${wfile}
 		echo "" >> ${wfile}
 		echo "mmcargs=setenv bootargs console=tty0 console=\${console} \${optargs} \${cape_disable} \${cape_enable} root=/dev/mmcblk0p${media_rootfs_partition} rootfstype=\${mmcrootfstype} \${cmdline}" >> ${wfile}
 		echo "" >> ${wfile}
@@ -724,6 +725,15 @@ kernel_detection () {
 		echo "Debug: image has: v${bone_dt_kernel}"
 		has_bone_kernel="enable"
 	fi
+
+	unset has_ti_kernel
+	unset check
+	check=$(ls "${dir_check}" | grep vmlinuz- | grep ti | head -n 1)
+	if [ "x${check}" != "x" ] ; then
+		ti_dt_kernel=$(ls "${dir_check}" | grep vmlinuz- | grep ti | head -n 1 | awk -F'vmlinuz-' '{print $2}')
+		echo "Debug: image has: v${ti_dt_kernel}"
+		has_ti_kernel="enable"
+	fi
 }
 
 kernel_select () {
@@ -745,8 +755,22 @@ kernel_select () {
 	fi
 
 	if [ "x${conf_kernel}" = "xbone" ] ; then
-		if [ "x${has_bone_kernel}" = "xenable" ] ; then
-			select_kernel="${bone_dt_kernel}"
+		if [ "x${has_ti_kernel}" = "xenable" ] ; then
+			select_kernel="${ti_dt_kernel}"
+		else
+			if [ "x${has_bone_kernel}" = "xenable" ] ; then
+				select_kernel="${bone_dt_kernel}"
+			else
+				if [ "x${has_multi_armv7_kernel}" = "xenable" ] ; then
+					select_kernel="${armv7_kernel}"
+				fi
+			fi
+		fi
+	fi
+
+	if [ "x${conf_kernel}" = "xti" ] ; then
+		if [ "x${has_ti_kernel}" = "xenable" ] ; then
+			select_kernel="${ti_dt_kernel}"
 		else
 			if [ "x${has_multi_armv7_kernel}" = "xenable" ] ; then
 				select_kernel="${armv7_kernel}"
@@ -757,7 +781,7 @@ kernel_select () {
 	if [ "${select_kernel}" ] ; then
 		echo "Debug: using: v${select_kernel}"
 	else
-		echo "Error: [conf_kernel] not defined [armv7_lpae,armv7,bone]..."
+		echo "Error: [conf_kernel] not defined [armv7_lpae,armv7,bone,ti]..."
 		exit
 	fi
 }
@@ -920,23 +944,24 @@ populate_rootfs () {
 		fi
 
 		if [ "${ENABLE_CAN}" ] ; then
-		        # CANbus for BMS
-		        echo "" >> ${wfile}
+		    # CANbus for BMS
+		    echo "" >> ${wfile}
 			echo "allow-hotplug can0" >> ${wfile}
 			echo "iface can0 can static" >> ${wfile}
-			echo "    bitrate 250000" >> ${wfile}
+			echo "    bitrate 125000" >> ${wfile}
                                  
-                        # CANbus for Charger
-                        echo "" >> ${wfile}
+            # CANbus for Charger
+            echo "" >> ${wfile}
 			echo "allow-hotplug can1" >> ${wfile}
 			echo "iface can1 can static" >> ${wfile}
 			echo "    bitrate 250000" >> ${wfile}
 
-                        # CANbus for Motor/EV
-                        echo "" >> ${wfile}
+            # CANbus for Motor/EV
+            echo "" >> ${wfile}
 			echo "allow-hotplug can2" >> ${wfile}
 			echo "iface can2 can static" >> ${wfile}
 			echo "    bitrate 250000" >> ${wfile}
+			echo "" >> ${wfile}
 		fi
 
 		#if we have systemd & wicd-gtk, diable eth0 in /etc/network/interfaces

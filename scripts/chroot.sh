@@ -227,13 +227,16 @@ sudo mv /tmp/01_noflash_kernel ${tempdir}/etc/dpkg/dpkg.cfg.d/01_noflash_kernel
 sudo mkdir -p ${tempdir}/usr/share/flash-kernel/db/ || true
 sudo cp -v ${OIB_DIR}/target/other/rcn-ee.db ${tempdir}/usr/share/flash-kernel/db/
 
-#generic apt.conf tweaks for flash/mmc devices to save on wasted space...
-sudo mkdir -p ${tempdir}/etc/apt/apt.conf.d/ || true
 
-#apt: /var/lib/apt/lists/, store compressed only
-echo "Acquire::GzipIndexes \"true\";" > /tmp/02compress-indexes
-echo "Acquire::CompressionTypes::Order:: \"gz\";" >> /tmp/02compress-indexes
-sudo mv /tmp/02compress-indexes ${tempdir}/etc/apt/apt.conf.d/02compress-indexes
+if [ "x${deb_distribution}" = "xdebian" ] ; then
+	#generic apt.conf tweaks for flash/mmc devices to save on wasted space...
+	sudo mkdir -p ${tempdir}/etc/apt/apt.conf.d/ || true
+
+	#apt: /var/lib/apt/lists/, store compressed only
+	echo "Acquire::GzipIndexes \"true\";" > /tmp/02compress-indexes
+	echo "Acquire::CompressionTypes::Order:: \"gz\";" >> /tmp/02compress-indexes
+	sudo mv /tmp/02compress-indexes ${tempdir}/etc/apt/apt.conf.d/02compress-indexes
+fi
 
 #set initial 'seed' time...
 sudo sh -c "date --utc \"+%4Y%2m%2d%2H%2M\" > ${tempdir}/etc/timestamp"
@@ -405,6 +408,14 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 			#Install the user choosen list.
 			echo "Log: (chroot) Installing: ${deb_additional_pkgs}"
 			apt-get -y --force-yes install ${deb_additional_pkgs}
+		fi
+
+		if [ ! "x${repo_rcnee_pkg_version}" = "x" ] ; then
+			echo "Log: (chroot) Installing modules for: ${repo_rcnee_pkg_version}"
+			apt-get -y --force-yes install mt7601u-modules-${repo_rcnee_pkg_version} || true
+			apt-get -y --force-yes install ti-sgx-es8-modules-${repo_rcnee_pkg_version} || true
+			depmod -a ${repo_rcnee_pkg_version}
+			update-initramfs -u -k ${repo_rcnee_pkg_version}
 		fi
 
 		if [ "x${chroot_enable_debian_backports}" = "xenable" ] ; then

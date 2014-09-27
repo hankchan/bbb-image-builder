@@ -131,38 +131,38 @@ setup_desktop () {
 		echo "Patching: ${wfile}"
 		sed -i -e 's:#autologin-user=:autologin-user='$rfs_username':g' ${wfile}
 		sed -i -e 's:#autologin-session=UNIMPLEMENTED:autologin-session='$rfs_default_desktop':g' ${wfile}
-		if [ -f /opt/scripts/3rdparty/xinput_calibrator_pointercal.sh ] ; then
-			sed -i -e 's:#display-setup-script=:display-setup-script=/opt/scripts/3rdparty/xinput_calibrator_pointercal.sh:g' ${wfile}
-		fi
+#		if [ -f /opt/scripts/3rdparty/xinput_calibrator_pointercal.sh ] ; then
+#			sed -i -e 's:#display-setup-script=:display-setup-script=/opt/scripts/3rdparty/xinput_calibrator_pointercal.sh:g' ${wfile}
+#		fi
 	fi
 
-	if [ ! "x${rfs_desktop_background}" = "x" ] ; then
-		cp -v "${rfs_desktop_background}" /opt/desktop-background.jpg
+#	if [ ! "x${rfs_desktop_background}" = "x" ] ; then
+#		cp -v "${rfs_desktop_background}" /opt/desktop-background.jpg
+#
+#		mkdir -p /home/${rfs_username}/.config/pcmanfm/LXDE/ || true
+#		wfile="/home/${rfs_username}/.config/pcmanfm/LXDE/pcmanfm.conf"
+#		echo "[desktop]" > ${wfile}
+#		echo "wallpaper_mode=1" >> ${wfile}
+#		echo "wallpaper=/opt/desktop-background.jpg" >> ${wfile}
+#		chown -R ${rfs_username}:${rfs_username} /home/${rfs_username}/.config/
+#	fi
 
-		mkdir -p /home/${rfs_username}/.config/pcmanfm/LXDE/ || true
-		wfile="/home/${rfs_username}/.config/pcmanfm/LXDE/pcmanfm.conf"
-		echo "[desktop]" > ${wfile}
-		echo "wallpaper_mode=1" >> ${wfile}
-		echo "wallpaper=/opt/desktop-background.jpg" >> ${wfile}
-		chown -R ${rfs_username}:${rfs_username} /home/${rfs_username}/.config/
-	fi
+#	#Disable dpms mode and screen blanking
+#	#Better fix for missing cursor
+#	wfile="/home/${rfs_username}/.xsessionrc"
+#	echo "#!/bin/sh" > ${wfile}
+#	echo "" >> ${wfile}
+#	echo "xset -dpms" >> ${wfile}
+#	echo "xset s off" >> ${wfile}
+#	echo "xsetroot -cursor_name left_ptr" >> ${wfile}
+#	chown -R ${rfs_username}:${rfs_username} ${wfile}
 
-	#Disable dpms mode and screen blanking
-	#Better fix for missing cursor
-	wfile="/home/${rfs_username}/.xsessionrc"
-	echo "#!/bin/sh" > ${wfile}
-	echo "" >> ${wfile}
-	echo "xset -dpms" >> ${wfile}
-	echo "xset s off" >> ${wfile}
-	echo "xsetroot -cursor_name left_ptr" >> ${wfile}
-	chown -R ${rfs_username}:${rfs_username} ${wfile}
-
-	#Disable LXDE's screensaver on autostart
-	if [ -f /etc/xdg/lxsession/LXDE/autostart ] ; then
-		cat /etc/xdg/lxsession/LXDE/autostart | grep -v xscreensaver > /tmp/autostart
-		mv /tmp/autostart /etc/xdg/lxsession/LXDE/autostart
-		rm -rf /tmp/autostart || true
-	fi
+#	#Disable LXDE's screensaver on autostart
+#	if [ -f /etc/xdg/lxsession/LXDE/autostart ] ; then
+#		cat /etc/xdg/lxsession/LXDE/autostart | grep -v xscreensaver > /tmp/autostart
+#		mv /tmp/autostart /etc/xdg/lxsession/LXDE/autostart
+#		rm -rf /tmp/autostart || true
+#	fi
 
 	wfile="/etc/udev/rules.d/70-persistent-net.rules"
 	echo "Patching: ${wfile}"
@@ -178,10 +178,10 @@ setup_desktop () {
 
 	#echo "CAPE=cape-bone-proto" >> /etc/default/capemgr
 
-	#root password is blank, so remove useless application as it requires a password.
-	if [ -f /usr/share/applications/gksu.desktop ] ; then
-		rm -f /usr/share/applications/gksu.desktop || true
-	fi
+#	#root password is blank, so remove useless application as it requires a password.
+#	if [ -f /usr/share/applications/gksu.desktop ] ; then
+#		rm -f /usr/share/applications/gksu.desktop || true
+#	fi
 
 	#Add Website for Help:
 	echo "Support/FAQ: http://elinux.org/Beagleboard:BeagleBoneBlack_Debian" >> /etc/issue
@@ -199,13 +199,13 @@ setup_desktop () {
 		sed -i -e 's:#Banner:Banner:g' /etc/ssh/sshd_config
 	fi
 
-	#lxterminal doesnt reference .profile by default, so call via loginshell and start bash
-	if [ -f /usr/bin/lxterminal ] ; then
-		if [ -f /usr/share/applications/lxterminal.desktop ] ; then
-			sed -i -e 's:Exec=lxterminal:Exec=lxterminal -l -e bash:g' /usr/share/applications/lxterminal.desktop
-			sed -i -e 's:TryExec=lxterminal -l -e bash:TryExec=lxterminal:g' /usr/share/applications/lxterminal.desktop
-		fi
-	fi
+#	#lxterminal doesnt reference .profile by default, so call via loginshell and start bash
+#	if [ -f /usr/bin/lxterminal ] ; then
+#		if [ -f /usr/share/applications/lxterminal.desktop ] ; then
+#			sed -i -e 's:Exec=lxterminal:Exec=lxterminal -l -e bash:g' /usr/share/applications/lxterminal.desktop
+#			sed -i -e 's:TryExec=lxterminal -l -e bash:TryExec=lxterminal:g' /usr/share/applications/lxterminal.desktop
+#		fi
+#	fi
 }
 
 cleanup_npm_cache () {
@@ -251,7 +251,7 @@ install_node_pkgs () {
 
 		#http://blog.npmjs.org/post/78085451721/npms-self-signed-certificate-is-no-more
 		#The cause: npm no longer supports its self-signed certificates.
-		npm config set ca ""
+		#npm config set ca ""
 
 		#echo "debug: npm config ls -l (after)"
 		#echo "--------------------------------"
@@ -293,20 +293,18 @@ install_node_pkgs () {
 			if [ -f /opt/cloud9/install.sh ] ; then
 				cd /opt/cloud9/
 				/bin/sh ./install.sh
+				echo "cloud9: jessie"
+				systemctl enable cloud9.socket
 				cd -
 			fi
-
-			#if [ -f /opt/scripts/mods/cloud9-systemd-fix.diff ] ; then
-			#	cd /opt/cloud9/
-			#	patch -p1 < /opt/scripts/mods/cloud9-systemd-fix.diff
-			#	cd /opt/
-			#fi
 		fi
 
 		git_repo="https://github.com/beagleboard/bone101"
 		git_target_dir="/var/lib/cloud9"
 		git_clone
 		if [ -f ${git_target_dir}/.git/config ] ; then
+			echo "jekyll pre-building bone101"
+			/usr/local/bin/jekyll build
 			chown -R ${rfs_username}:${rfs_username} ${git_target_dir}
 			cd ${git_target_dir}/
 
@@ -327,6 +325,17 @@ install_node_pkgs () {
 			echo "SyslogIdentifier=bonescript" >> ${wfile}
 
 			systemctl enable bonescript.socket
+
+			wfile="/lib/systemd/system/jekyll.service"
+			echo "[Unit]" > ${wfile}
+			echo "Description=jekyll server" >> ${wfile}
+			echo "" >> ${wfile}
+			echo "[Service]" >> ${wfile}
+			echo "WorkingDirectory=/var/lib/cloud9" >> ${wfile}
+			echo "ExecStart=/usr/local/bin/jekyll serve" >> ${wfile}
+			echo "SyslogIdentifier=jekyll" >> ${wfile}
+
+			systemctl enable jekyll.service
 
 			wfile="/lib/systemd/system/bonescript-autorun.service"
 			echo "[Unit]" > ${wfile}
@@ -352,8 +361,8 @@ install_node_pkgs () {
 				if [ -f /etc/apache2/sites-enabled/000-default ] ; then
 					sed -i -e 's:80:8080:g' /etc/apache2/sites-enabled/000-default
 				fi
-				if [ -f /var/www/index.html ] ; then
-					rm -rf /var/www/index.html || true
+				if [ -f /var/www/html/index.html ] ; then
+					rm -rf /var/www/html/index.html || true
 				fi
 			fi
 		fi
@@ -363,30 +372,9 @@ install_node_pkgs () {
 install_pip_pkgs () {
 	if [ -f /usr/bin/pip ] ; then
 		echo "Installing pip packages"
-
-		#debian@beaglebone:~$ pip install Adafruit_BBIO
-		#Downloading/unpacking Adafruit-BBIO
-		#  Downloading Adafruit_BBIO-0.0.19.tar.gz
-		#  Running setup.py egg_info for package Adafruit-BBIO
-		#    The required version of distribute (>=0.6.45) is not available,
-		#    and can't be installed while this script is running. Please
-		#    install a more recent version first, using
-		#    'easy_install -U distribute'.
-		#
-		#    (Currently using distribute 0.6.24dev-r0 (/usr/lib/python2.7/dist-packages))
-		#    Complete output from command python setup.py egg_info:
-		#    The required version of distribute (>=0.6.45) is not available,
-		#
-		#and can't be installed while this script is running. Please
-		#
-		#install a more recent version first, using
-		#
-		#'easy_install -U distribute'.
-		#
-		#(Currently using distribute 0.6.24dev-r0 (/usr/lib/python2.7/dist-packages))
-
-		easy_install -U distribute
-		pip install Adafruit_BBIO
+		#broken with gcc-4.9 and needs:
+		#libpython2.7-dev
+		#pip install Adafruit_BBIO
 	fi
 }
 
@@ -487,6 +475,8 @@ unsecure_root () {
 		#Make ssh root@beaglebone work..
 		sed -i -e 's:PermitEmptyPasswords no:PermitEmptyPasswords yes:g' /etc/ssh/sshd_config
 		sed -i -e 's:UsePAM yes:UsePAM no:g' /etc/ssh/sshd_config
+		#Starting with Jessie:
+		sed -i -e 's:PermitRootLogin without-password:PermitRootLogin yes:g' /etc/ssh/sshd_config
 	fi
 
 	if [ -f /etc/sudoers ] ; then
@@ -506,7 +496,7 @@ install_pip_pkgs
 if [ -f /usr/bin/git ] ; then
 	install_git_repos
 fi
-install_build_pkgs
+#install_build_pkgs
 other_source_links
 unsecure_root
 #
