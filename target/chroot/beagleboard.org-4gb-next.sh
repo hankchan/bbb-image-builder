@@ -23,7 +23,7 @@
 export LC_ALL=C
 
 chromium_release="chromium-33.0.1750.117"
-u_boot_release="v2014.10-rc2"
+u_boot_release="v2014.10"
 cloud9_pkg="c9v3-beaglebone-build-2-20140414.tar.gz"
 
 #contains: rfs_username, release_date
@@ -34,6 +34,12 @@ fi
 if [ -f /etc/oib.project ] ; then
 	. /etc/oib.project
 fi
+
+export HOME=/home/${rfs_username}
+export USER=${rfs_username}
+export USERNAME=${rfs_username}
+
+echo "env: [`env`]"
 
 is_this_qemu () {
 	unset warn_qemu_will_fail
@@ -81,7 +87,15 @@ setup_system () {
 	cd /
 	if [ -f /opt/scripts/mods/debian-add-sbin-usr-sbin-to-default-path.diff ] ; then
 		if [ -f /usr/bin/patch ] ; then
+			echo "Patching: /etc/profile"
 			patch -p1 < /opt/scripts/mods/debian-add-sbin-usr-sbin-to-default-path.diff
+		fi
+	fi
+
+	if [ -f /opt/scripts/mods/jessie-systemd-poweroff.diff ] ; then
+		if [ -f /usr/bin/patch ] ; then
+			echo "Patching: /lib/udev/rules.d/70-power-switch.rules"
+			patch -p1 < /opt/scripts/mods/jessie-systemd-poweroff.diff
 		fi
 	fi
 
@@ -136,26 +150,23 @@ setup_desktop () {
 #		fi
 	fi
 
-#	if [ ! "x${rfs_desktop_background}" = "x" ] ; then
-#		cp -v "${rfs_desktop_background}" /opt/desktop-background.jpg
-#
-#		mkdir -p /home/${rfs_username}/.config/pcmanfm/LXDE/ || true
-#		wfile="/home/${rfs_username}/.config/pcmanfm/LXDE/pcmanfm.conf"
-#		echo "[desktop]" > ${wfile}
-#		echo "wallpaper_mode=1" >> ${wfile}
-#		echo "wallpaper=/opt/desktop-background.jpg" >> ${wfile}
-#		chown -R ${rfs_username}:${rfs_username} /home/${rfs_username}/.config/
-#	fi
+	if [ ! "x${rfs_desktop_background}" = "x" ] ; then
+		mkdir -p /home/${rfs_username}/.config/ || true
+		if [ -d /opt/scripts/desktop-defaults/jessie/lxqt/ ] ; then
+			cp -rv /opt/scripts/desktop-defaults/jessie/lxqt/* /home/${rfs_username}/.config
+		fi
+		chown -R ${rfs_username}:${rfs_username} /home/${rfs_username}/.config/
+	fi
 
-#	#Disable dpms mode and screen blanking
-#	#Better fix for missing cursor
-#	wfile="/home/${rfs_username}/.xsessionrc"
-#	echo "#!/bin/sh" > ${wfile}
-#	echo "" >> ${wfile}
-#	echo "xset -dpms" >> ${wfile}
-#	echo "xset s off" >> ${wfile}
-#	echo "xsetroot -cursor_name left_ptr" >> ${wfile}
-#	chown -R ${rfs_username}:${rfs_username} ${wfile}
+	#Disable dpms mode and screen blanking
+	#Better fix for missing cursor
+	wfile="/home/${rfs_username}/.xsessionrc"
+	echo "#!/bin/sh" > ${wfile}
+	echo "" >> ${wfile}
+	echo "xset -dpms" >> ${wfile}
+	echo "xset s off" >> ${wfile}
+	echo "xsetroot -cursor_name left_ptr" >> ${wfile}
+	chown -R ${rfs_username}:${rfs_username} ${wfile}
 
 #	#Disable LXDE's screensaver on autostart
 #	if [ -f /etc/xdg/lxsession/LXDE/autostart ] ; then
@@ -301,12 +312,22 @@ install_node_pkgs () {
 
 		git_repo="https://github.com/beagleboard/bone101"
 		git_target_dir="/var/lib/cloud9"
+
+	if [ -f /usr/local/bin/jekyll ] ; then
 		git_clone
+	else
+		git_clone_full
+	fi
 		if [ -f ${git_target_dir}/.git/config ] ; then
-			echo "jekyll pre-building bone101"
-			/usr/local/bin/jekyll build
 			chown -R ${rfs_username}:${rfs_username} ${git_target_dir}
 			cd ${git_target_dir}/
+
+		if [ -f /usr/local/bin/jekyll ] ; then
+			echo "jekyll pre-building bone101"
+			/usr/local/bin/jekyll build
+		else
+			git checkout 15ad28c7e8a5d57e133f1ac8dce63a237313f6ad -b tmp
+		fi
 
 			wfile="/lib/systemd/system/bonescript.socket"
 			echo "[Socket]" > ${wfile}
@@ -326,16 +347,22 @@ install_node_pkgs () {
 
 			systemctl enable bonescript.socket
 
-			wfile="/lib/systemd/system/jekyll.service"
+		if [ -f /usr/local/bin/jekyll ] ; then
+			wfile="/lib/systemd/system/jekyll-autorun.service"
 			echo "[Unit]" > ${wfile}
-			echo "Description=jekyll server" >> ${wfile}
+			echo "Description=jekyll autorun" >> ${wfile}
+			echo "ConditionPathExists=|/var/lib/cloud9" >> ${wfile}
 			echo "" >> ${wfile}
 			echo "[Service]" >> ${wfile}
 			echo "WorkingDirectory=/var/lib/cloud9" >> ${wfile}
-			echo "ExecStart=/usr/local/bin/jekyll serve" >> ${wfile}
-			echo "SyslogIdentifier=jekyll" >> ${wfile}
+			echo "ExecStart=/usr/local/bin/jekyll build --watch" >> ${wfile}
+			echo "SyslogIdentifier=jekyll-autorun" >> ${wfile}
+			echo "" >> ${wfile}
+			echo "[Install]" >> ${wfile}
+			echo "WantedBy=multi-user.target" >> ${wfile}
 
-			systemctl enable jekyll.service
+			systemctl enable jekyll-autorun.service
+		fi
 
 			wfile="/lib/systemd/system/bonescript-autorun.service"
 			echo "[Unit]" > ${wfile}
@@ -372,19 +399,32 @@ install_node_pkgs () {
 install_pip_pkgs () {
 	if [ -f /usr/bin/pip ] ; then
 		echo "Installing pip packages"
-		#broken with gcc-4.9 and needs:
+		#Fixed in git, however not pushed to pip yet...(use git and install)
 		#libpython2.7-dev
 		#pip install Adafruit_BBIO
+
+		git_repo="https://github.com/adafruit/adafruit-beaglebone-io-python.git"
+		git_target_dir="/opt/source/adafruit-beaglebone-io-python"
+		git_clone
+		if [ -f ${git_target_dir}/.git/config ] ; then
+			cd ${git_target_dir}/
+			python setup.py install
+		fi
 	fi
 }
 
 install_gem_pkgs () {
 	if [ -f /usr/bin/gem ] ; then
 		echo "Installing gem packages"
+		echo "debug: gem: [`gem --version`]"
+		gem_wheezy="--no-rdoc --no-ri"
+		gem_jessie="--no-document"
+
 		echo "gem: [beaglebone]"
 		gem install beaglebone
-		echo "gem: [jekyll --no-document]"
-		gem install jekyll --no-document
+
+#		echo "gem: [jekyll ${gem_jessie}]"
+#		gem install jekyll ${gem_jessie}
 	fi
 }
 

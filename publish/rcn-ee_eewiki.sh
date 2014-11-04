@@ -12,8 +12,8 @@ export apt_proxy=apt-proxy:3142/
 ./RootStock-NG.sh -c eewiki_minfs_debian_stable_armhf
 ./RootStock-NG.sh -c eewiki_minfs_ubuntu_stable_armhf
 
-debian_stable="debian-7.6"
-ubuntu_stable="ubuntu-14.04"
+debian_stable="debian-7.7"
+ubuntu_stable="ubuntu-14.04.1"
 archive="xz -z -8 -v"
 
 cat > ${DIR}/deploy/gift_wrap_final_images.sh <<-__EOF__

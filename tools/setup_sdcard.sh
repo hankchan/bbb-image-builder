@@ -373,10 +373,24 @@ format_partition_error () {
 	exit
 }
 
-format_partition () {
+format_partition_try2 () {
+	echo "-----------------------------"
+	echo "BUG: [${mkfs_partition}] was not available so trying [${mkfs}] again in 5 seconds..."
+	partprobe ${media}
+	sync
+	sleep 5
+	echo "-----------------------------"
+
 	echo "Formating with: [${mkfs} ${mkfs_partition} ${mkfs_label}]"
 	echo "-----------------------------"
 	LC_ALL=C ${mkfs} ${mkfs_partition} ${mkfs_label} || format_partition_error
+	sync
+}
+
+format_partition () {
+	echo "Formating with: [${mkfs} ${mkfs_partition} ${mkfs_label}]"
+	echo "-----------------------------"
+	LC_ALL=C ${mkfs} ${mkfs_partition} ${mkfs_label} || format_partition_try2
 	sync
 }
 
@@ -508,61 +522,40 @@ create_partitions () {
 boot_git_tools () {
 	if [ ! "${offline}" ] && [ "x${bborg_production}" = "xenable" ] ; then
 
-		if [ "x${conf_board}" = "xam335x_boneblack" ] || [ "x${conf_board}" = "xam335x_evm" ] ; then
-
-			echo "Debug: Adding BeagleBone drivers from: https://github.com/beagleboard/beaglebone-getting-started"
-			#Not planning to change these too often, once pulled, remove .git stuff...
-			mkdir -p ${TEMPDIR}/drivers/
-			git clone https://github.com/beagleboard/beaglebone-getting-started.git ${TEMPDIR}/drivers/ --depth 1
-			if [ -f ${TEMPDIR}/drivers/.git/config ] ; then
-				rm -rf ${TEMPDIR}/drivers/.git/ || true
-			fi
-
-			if [ -d ${TEMPDIR}/drivers/App ] ; then
-				mv ${TEMPDIR}/drivers/App ${TEMPDIR}/disk/
-			fi
-			if [ -d ${TEMPDIR}/drivers/Drivers ] ; then
-				mv ${TEMPDIR}/drivers/Drivers ${TEMPDIR}/disk/
-			fi
-			if [ -d ${TEMPDIR}/drivers/Docs ] ; then
-				mv ${TEMPDIR}/drivers/Docs ${TEMPDIR}/disk/
-			fi
-			if [ -d ${TEMPDIR}/drivers/scripts ] ; then
-				mv ${TEMPDIR}/drivers/scripts ${TEMPDIR}/disk/
-			fi
-			if [ -f ${TEMPDIR}/drivers/autorun.inf ] ; then
-				mv ${TEMPDIR}/drivers/autorun.inf ${TEMPDIR}/disk/
-			fi
-			if [ -f ${TEMPDIR}/drivers/LICENSE.txt ] ; then
-				mv ${TEMPDIR}/drivers/LICENSE.txt ${TEMPDIR}/disk/
-			fi
-			if [ -f ${TEMPDIR}/drivers/README.htm ] ; then
-				mv ${TEMPDIR}/drivers/README.htm ${TEMPDIR}/disk/
-			fi
-			if [ -f ${TEMPDIR}/drivers/README.md ] ; then
-				mv ${TEMPDIR}/drivers/README.md ${TEMPDIR}/disk/
-			fi
-			if [ -f ${TEMPDIR}/drivers/START.htm ] ; then
-				mv ${TEMPDIR}/drivers/START.htm ${TEMPDIR}/disk/
-			fi
-
+		echo "Debug: Adding BeagleBone drivers from: https://github.com/beagleboard/beaglebone-getting-started"
+		#Not planning to change these too often, once pulled, remove .git stuff...
+		mkdir -p ${TEMPDIR}/drivers/
+		git clone https://github.com/beagleboard/beaglebone-getting-started.git ${TEMPDIR}/drivers/ --depth 1
+		if [ -f ${TEMPDIR}/drivers/.git/config ] ; then
+			rm -rf ${TEMPDIR}/drivers/.git/ || true
 		fi
 
-		if [ ! -f ${TEMPDIR}/disk/START.htm ] ; then
-
-			wfile=START.htm
-			echo "<!DOCTYPE html>" > ${TEMPDIR}/disk/${wfile}
-			echo "<html>" >> ${TEMPDIR}/disk/${wfile}
-			echo "<body>" >> ${TEMPDIR}/disk/${wfile}
-			echo "" >> ${TEMPDIR}/disk/${wfile}
-			echo "<script>" >> ${TEMPDIR}/disk/${wfile}
-			echo "  window.location = \"http://192.168.7.2\";" >> ${TEMPDIR}/disk/${wfile}
-			echo "</script>" >> ${TEMPDIR}/disk/${wfile}
-			echo "" >> ${TEMPDIR}/disk/${wfile}
-			echo "</body>" >> ${TEMPDIR}/disk/${wfile}
-			echo "</html>" >> ${TEMPDIR}/disk/${wfile}
-			echo "" >> ${TEMPDIR}/disk/${wfile}
-
+		if [ -d ${TEMPDIR}/drivers/App ] ; then
+			mv ${TEMPDIR}/drivers/App ${TEMPDIR}/disk/
+		fi
+		if [ -d ${TEMPDIR}/drivers/Drivers ] ; then
+			mv ${TEMPDIR}/drivers/Drivers ${TEMPDIR}/disk/
+		fi
+		if [ -d ${TEMPDIR}/drivers/Docs ] ; then
+			mv ${TEMPDIR}/drivers/Docs ${TEMPDIR}/disk/
+		fi
+		if [ -d ${TEMPDIR}/drivers/scripts ] ; then
+			mv ${TEMPDIR}/drivers/scripts ${TEMPDIR}/disk/
+		fi
+		if [ -f ${TEMPDIR}/drivers/autorun.inf ] ; then
+			mv ${TEMPDIR}/drivers/autorun.inf ${TEMPDIR}/disk/
+		fi
+		if [ -f ${TEMPDIR}/drivers/LICENSE.txt ] ; then
+			mv ${TEMPDIR}/drivers/LICENSE.txt ${TEMPDIR}/disk/
+		fi
+		if [ -f ${TEMPDIR}/drivers/README.htm ] ; then
+			mv ${TEMPDIR}/drivers/README.htm ${TEMPDIR}/disk/
+		fi
+		if [ -f ${TEMPDIR}/drivers/README.md ] ; then
+			mv ${TEMPDIR}/drivers/README.md ${TEMPDIR}/disk/
+		fi
+		if [ -f ${TEMPDIR}/drivers/START.htm ] ; then
+			mv ${TEMPDIR}/drivers/START.htm ${TEMPDIR}/disk/
 		fi
 
 		sync
@@ -580,11 +573,21 @@ populate_boot () {
 
 	partprobe ${media}
 	if ! mount -t ${mount_partition_format} ${media_prefix}${media_boot_partition} ${TEMPDIR}/disk; then
+
 		echo "-----------------------------"
-		echo "Unable to mount ${media_prefix}${media_boot_partition} at ${TEMPDIR}/disk to complete populating Boot Partition"
-		echo "Please retry running the script, sometimes rebooting your system helps."
+		echo "BUG: [${media_prefix}${media_boot_partition}] was not available so trying to mount again in 5 seconds..."
+		partprobe ${media}
+		sync
+		sleep 5
 		echo "-----------------------------"
-		exit
+
+		if ! mount -t ${mount_partition_format} ${media_prefix}${media_boot_partition} ${TEMPDIR}/disk; then
+			echo "-----------------------------"
+			echo "Unable to mount ${media_prefix}${media_boot_partition} at ${TEMPDIR}/disk to complete populating Boot Partition"
+			echo "Please retry running the script, sometimes rebooting your system helps."
+			echo "-----------------------------"
+			exit
+		fi
 	fi
 
 	if [ "${spl_name}" ] ; then
@@ -797,11 +800,21 @@ populate_rootfs () {
 
 	partprobe ${media}
 	if ! mount -t ${ROOTFS_TYPE} ${media_prefix}${media_rootfs_partition} ${TEMPDIR}/disk; then
+
 		echo "-----------------------------"
-		echo "Unable to mount ${media_prefix}${media_rootfs_partition} at ${TEMPDIR}/disk to complete populating rootfs Partition"
-		echo "Please retry running the script, sometimes rebooting your system helps."
+		echo "BUG: [${media_prefix}${media_rootfs_partition}] was not available so trying to mount again in 5 seconds..."
+		partprobe ${media}
+		sync
+		sleep 5
 		echo "-----------------------------"
-		exit
+
+		if ! mount -t ${ROOTFS_TYPE} ${media_prefix}${media_rootfs_partition} ${TEMPDIR}/disk; then
+			echo "-----------------------------"
+			echo "Unable to mount ${media_prefix}${media_rootfs_partition} at ${TEMPDIR}/disk to complete populating rootfs Partition"
+			echo "Please retry running the script, sometimes rebooting your system helps."
+			echo "-----------------------------"
+			exit
+		fi
 	fi
 
 	if [ -f "${DIR}/${ROOTFS}" ] ; then
@@ -848,7 +861,8 @@ populate_rootfs () {
 	unset kms_video
 	if [ "x${drm_read_edid_broken}" = "xenable" ] ; then
 		drm_device_identifier=${drm_device_identifier:-"HDMI-A-1"}
-		kms_video="video=${drm_device_identifier}:1024x768@60e"
+		drm_device_timing=${drm_device_timing:-"1024x768@60e"}
+		kms_video="video=${drm_device_identifier}:${drm_device_timing}"
 	fi
 
 	if [ "x${enable_systemd}" = "xenabled" ] ; then
@@ -973,6 +987,13 @@ populate_rootfs () {
 			fi
 		fi
 
+		#if we have connman, disable eth0 in /etc/network/interfaces
+		if [ -f ${TEMPDIR}/disk/etc/init.d/connman ] ; then
+			sed -i 's/auto eth0/#auto eth0/g' ${wfile}
+			sed -i 's/allow-hotplug eth0/#allow-hotplug eth0/g' ${wfile}
+			sed -i 's/iface eth0 inet dhcp/#iface eth0 inet dhcp/g' ${wfile}
+		fi
+
 		echo "# Example to keep MAC address between reboots" >> ${wfile}
 		echo "#hwaddress ether DE:AD:BE:EF:CA:FE" >> ${wfile}
 
@@ -1041,6 +1062,15 @@ populate_rootfs () {
 			mkdir -p ${TEMPDIR}/disk/opt/scripts/tools/eMMC/
 			${dl_quiet} --directory-prefix="${TEMPDIR}/disk/opt/scripts/tools/eMMC/" ${git_rcn_boot}/eMMC/init-eMMC-flasher-v3.sh
 			sudo chmod +x ${TEMPDIR}/disk/opt/scripts/tools/eMMC/init-eMMC-flasher-v3.sh
+		fi
+	fi
+
+	if [ "x${conf_board}" = "xomap5_uevm" ] ; then
+		wfile="/etc/X11/xorg.conf"
+		if [ -f ${TEMPDIR}/disk${wfile} ] ; then
+			sudo sed -i -e 's:modesetting:omap:g' ${TEMPDIR}/disk${wfile}
+			sudo sed -i -e 's:fbdev:omap:g' ${TEMPDIR}/disk${wfile}
+			sudo sed -i -e 's:16:24:g' ${TEMPDIR}/disk${wfile}
 		fi
 	fi
 

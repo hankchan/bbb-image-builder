@@ -23,7 +23,7 @@
 export LC_ALL=C
 
 chromium_release="chromium-33.0.1750.117"
-u_boot_release="v2014.10-rc2"
+u_boot_release="v2014.10"
 cloud9_pkg="c9v3-beaglebone-build-2-20140414.tar.gz"
 
 #contains: rfs_username, release_date
@@ -34,6 +34,12 @@ fi
 if [ -f /etc/oib.project ] ; then
 	. /etc/oib.project
 fi
+
+export HOME=/home/${rfs_username}
+export USER=${rfs_username}
+export USERNAME=${rfs_username}
+
+echo "env: [`env`]"
 
 is_this_qemu () {
 	unset warn_qemu_will_fail
@@ -295,20 +301,26 @@ install_node_pkgs () {
 				/bin/sh ./install.sh
 				cd -
 			fi
-
-			#if [ -f /opt/scripts/mods/cloud9-systemd-fix.diff ] ; then
-			#	cd /opt/cloud9/
-			#	patch -p1 < /opt/scripts/mods/cloud9-systemd-fix.diff
-			#	cd /opt/
-			#fi
 		fi
 
 		git_repo="https://github.com/beagleboard/bone101"
 		git_target_dir="/var/lib/cloud9"
+
+	if [ -f /usr/local/bin/jekyll ] ; then
 		git_clone
+	else
+		git_clone_full
+	fi
 		if [ -f ${git_target_dir}/.git/config ] ; then
 			chown -R ${rfs_username}:${rfs_username} ${git_target_dir}
 			cd ${git_target_dir}/
+
+		if [ -f /usr/local/bin/jekyll ] ; then
+			echo "jekyll pre-building bone101"
+			/usr/local/bin/jekyll build
+		else
+			git checkout 15ad28c7e8a5d57e133f1ac8dce63a237313f6ad -b tmp
+		fi
 
 			wfile="/lib/systemd/system/bonescript.socket"
 			echo "[Socket]" > ${wfile}
@@ -327,6 +339,23 @@ install_node_pkgs () {
 			echo "SyslogIdentifier=bonescript" >> ${wfile}
 
 			systemctl enable bonescript.socket
+
+		if [ -f /usr/local/bin/jekyll ] ; then
+			wfile="/lib/systemd/system/jekyll-autorun.service"
+			echo "[Unit]" > ${wfile}
+			echo "Description=jekyll autorun" >> ${wfile}
+			echo "ConditionPathExists=|/var/lib/cloud9" >> ${wfile}
+			echo "" >> ${wfile}
+			echo "[Service]" >> ${wfile}
+			echo "WorkingDirectory=/var/lib/cloud9" >> ${wfile}
+			echo "ExecStart=/usr/local/bin/jekyll build --watch" >> ${wfile}
+			echo "SyslogIdentifier=jekyll-autorun" >> ${wfile}
+			echo "" >> ${wfile}
+			echo "[Install]" >> ${wfile}
+			echo "WantedBy=multi-user.target" >> ${wfile}
+
+			systemctl enable jekyll-autorun.service
+		fi
 
 			wfile="/lib/systemd/system/bonescript-autorun.service"
 			echo "[Unit]" > ${wfile}
@@ -393,10 +422,15 @@ install_pip_pkgs () {
 install_gem_pkgs () {
 	if [ -f /usr/bin/gem ] ; then
 		echo "Installing gem packages"
+		echo "debug: gem: [`gem --version`]"
+		gem_wheezy="--no-rdoc --no-ri"
+		gem_jessie="--no-document"
+
 		echo "gem: [beaglebone]"
 		gem install beaglebone
-		echo "gem: [jekyll --no-document]"
-		gem install jekyll --no-document
+
+#		echo "gem: [jekyll ${gem_wheezy}]"
+#		gem install jekyll ${gem_wheezy}
 	fi
 }
 
