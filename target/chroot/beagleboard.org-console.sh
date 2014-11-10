@@ -555,8 +555,8 @@ install_hsbms () {
 	fi	
 
 	# crontab ntpdate 
-	echo "HS: Add crontab task"
-	echo "*/10 * * * * ntpdate -u 1.cn.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org" | crontab -
+	#echo "HS: Add crontab task"
+	#echo "*/10 * * * * ntpdate -u 1.cn.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org" | crontab -
 
 	# ppp
 	echo "HS: Configure ppp"
