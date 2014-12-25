@@ -261,6 +261,9 @@ generate_soc () {
 	echo "conf_boot_endmb=${conf_boot_endmb}" >> ${wfile}
 	echo "sfdisk_fstype=${sfdisk_fstype}" >> ${wfile}
 	echo "" >> ${wfile}
+	echo "boot_label=${BOOT_LABEL}" >> ${wfile}
+	echo "rootfs_label=${ROOTFS_LABEL}" >> ${wfile}
+	echo "" >> ${wfile}
 	echo "#Kernel" >> ${wfile}
 	echo "dtb=${dtb}" >> ${wfile}
 	echo "serial_tty=${SERIAL}" >> ${wfile}
@@ -607,6 +610,11 @@ populate_boot () {
 				echo "-----------------------------"
 			fi
 		fi
+	fi
+
+	if [ "x${distro_defaults}" = "xenable" ] ; then
+		${dl_quiet} --directory-prefix="${TEMPDIR}/dl/" https://raw.githubusercontent.com/RobertCNelson/netinstall/master/lib/distro_defaults.scr
+		cp -v ${TEMPDIR}/dl/distro_defaults.scr ${TEMPDIR}/disk/boot.scr
 	fi
 
 	if [ "x${conf_board}" = "xam335x_boneblack" ] || [ "x${conf_board}" = "xam335x_evm" ] ; then
@@ -1065,7 +1073,7 @@ populate_rootfs () {
 		fi
 	fi
 
-	if [ "x${conf_board}" = "xomap5_uevm" ] ; then
+	if [ "x${conf_board}" = "xomap5_uevm" ] || [ "x${conf_board}" = "xbeagle_x15" ] ; then
 		wfile="/etc/X11/xorg.conf"
 		if [ -f ${TEMPDIR}/disk${wfile} ] ; then
 			sudo sed -i -e 's:modesetting:omap:g' ${TEMPDIR}/disk${wfile}
@@ -1253,56 +1261,21 @@ while [ ! -z "$1" ] ; do
 		check_root
 		check_mmc
 		;;
-	--img-1gb)
+	--img|--img-[1248]gb)
 		checkparm $2
-		imagename="$2"
-		if [ "x${imagename}" = "x" ] ; then
-			imagename=image.img
-		fi
-		name=$(echo ${imagename} | awk -F '.img' '{print $1}')
-		imagename="${name}-1gb.img"
+		name=${2:-image}
+		gsize=$(echo "$1" | sed -ne 's/^--img-\([[:digit:]]\+\)gb$/\1/p')
+		# --img defaults to --img-2gb
+		gsize=${gsize:-2}
+		imagename=${name%.img}-${gsize}gb.img
 		media="${DIR}/${imagename}"
 		build_img_file="enable"
 		check_root
 		if [ -f "${media}" ] ; then
 			rm -rf "${media}" || true
 		fi
-		#FIXME: 700Mb initial size... (should fit most 1Gb microSD cards)
-		dd if=/dev/zero of="${media}" bs=1024 count=0 seek=$[1024*700]
-		;;
-	--img|--img-2gb)
-		checkparm $2
-		imagename="$2"
-		if [ "x${imagename}" = "x" ] ; then
-			imagename=image.img
-		fi
-		name=$(echo ${imagename} | awk -F '.img' '{print $1}')
-		imagename="${name}-2gb.img"
-		media="${DIR}/${imagename}"
-		build_img_file="enable"
-		check_root
-		if [ -f "${media}" ] ; then
-			rm -rf "${media}" || true
-		fi
-		#FIXME: 1,700Mb initial size... (should fit most 2Gb microSD cards)
-		dd if=/dev/zero of="${media}" bs=1024 count=0 seek=$[1024*1700]
-		;;
-	--img-4gb)
-		checkparm $2
-		imagename="$2"
-		if [ "x${imagename}" = "x" ] ; then
-			imagename=image.img
-		fi
-		name=$(echo ${imagename} | awk -F '.img' '{print $1}')
-		imagename="${name}-4gb.img"
-		media="${DIR}/${imagename}"
-		build_img_file="enable"
-		check_root
-		if [ -f "${media}" ] ; then
-			rm -rf "${media}" || true
-		fi
-		#FIXME: (should fit most 4Gb microSD cards)
-		dd if=/dev/zero of="${media}" bs=1024 count=0 seek=$[1024*3700]
+		#FIXME: (should fit most microSD cards)
+		dd if=/dev/zero of="${media}" bs=1024 count=0 seek=$((1024 * (700 + (gsize - 1) * 1000)))
 		;;
 	--dtb)
 		checkparm $2

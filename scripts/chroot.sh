@@ -25,6 +25,8 @@ host_arch="$(uname -m)"
 time=$(date +%Y-%m-%d)
 OIB_DIR="$(dirname "$( cd "$(dirname "$0")" ; pwd -P )" )"
 
+abi=aa
+
 . ${DIR}/.project
 
 check_defines () {
@@ -247,6 +249,10 @@ if [ "x${deb_distribution}" = "xdebian" ] ; then
 	#apt: /var/lib/apt/lists/, store compressed only
 	echo 'Acquire::GzipIndexes "true"; Acquire::CompressionTypes::Order:: "gz";' > /tmp/02compress-indexes
 	sudo mv /tmp/02compress-indexes ${tempdir}/etc/apt/apt.conf.d/02compress-indexes
+
+	#apt: make sure apt-cacher-ng doesn't break oracle-java8-installer
+	echo 'Acquire::http::Proxy::download.oracle.com "DIRECT";' > /tmp/03-proxy-oracle
+	sudo mv /tmp/03-proxy-oracle ${tempdir}/etc/apt/apt.conf.d/03-proxy-oracle
 fi
 
 #set initial 'seed' time...
@@ -258,7 +264,7 @@ echo "#deb-src http://${deb_mirror} ${deb_codename} ${deb_components}" >> ${wfil
 echo "" >> ${wfile}
 
 case "${deb_codename}" in
-jessie|sid)
+stretch|buster|sid)
 	echo "#deb http://${deb_mirror} ${deb_codename}-updates ${deb_components}" >> ${wfile}
 	echo "##deb-src http://${deb_mirror} ${deb_codename}-updates ${deb_components}" >> ${wfile}
 	;;
@@ -282,6 +288,12 @@ wheezy)
 		echo "##deb-src http://ftp.debian.org/debian ${deb_codename}-backports ${deb_components}" >> ${wfile}
 	fi
 	;;
+jessie)
+	echo "" >> ${wfile}
+	echo "#deb http://security.debian.org/ ${deb_codename}/updates ${deb_components}" >> ${wfile}
+	echo "##deb-src http://security.debian.org/ ${deb_codename}/updates ${deb_components}" >> ${wfile}
+	echo "" >> ${wfile}
+	;;
 esac
 
 if [ "x${repo_external}" = "xenable" ] ; then
@@ -297,10 +309,10 @@ if [ "x${repo_rcnee}" = "xenable" ] ; then
 	echo "#" >> ${wfile}
 	echo "#git clone https://github.com/RobertCNelson/linux-stable-rcn-ee" >> ${wfile}
 	echo "#cd ./linux-stable-rcn-ee" >> ${wfile}
-	echo "#git fetch --tags" >> ${wfile}
 	echo "#git checkout \`uname -r\` -b tmp" >> ${wfile}
 	echo "#" >> ${wfile}
 	echo "deb [arch=armhf] http://repos.rcn-ee.net/${deb_distribution}/ ${deb_codename} main" >> ${wfile}
+	echo "#deb-src [arch=armhf] http://repos.rcn-ee.net/${deb_distribution}/ ${deb_codename} main" >> ${wfile}
 
 	sudo cp -v ${OIB_DIR}/target/keyring/repos.rcn-ee.net-archive-keyring.asc ${tempdir}/tmp/repos.rcn-ee.net-archive-keyring.asc
 fi
@@ -354,7 +366,14 @@ echo "distro=${distro}" > /tmp/rcn-ee.conf
 echo "rfs_username=${rfs_username}" >> /tmp/rcn-ee.conf
 echo "release_date=${time}" >> /tmp/rcn-ee.conf
 echo "third_party_modules=${third_party_modules}" >> /tmp/rcn-ee.conf
+echo "abi=${abi}" >> /tmp/rcn-ee.conf
 sudo mv /tmp/rcn-ee.conf ${tempdir}/etc/rcn-ee.conf
+
+#use /etc/dogtag for all:
+if [ ! "x${rts_etc_dogtag}" = "x" ] ; then
+	echo "${rts_etc_dogtag} ${time}" > /tmp/dogtag
+	sudo mv /tmp/dogtag ${tempdir}/etc/dogtag
+fi
 
 cat > ${DIR}/chroot_script.sh <<-__EOF__
 	#!/bin/sh -e
@@ -687,6 +706,26 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		fi
 	}
 
+	systemd_tweaks () {
+		#We have systemd, so lets use it..
+
+		#systemd v215: systemd-timesyncd.service replaces ntpdate
+		#enabled by default in v216 (not in jessie)
+		if [ -f /lib/systemd/system/systemd-timesyncd.service ] ; then
+			echo "Log: (chroot): enabling: systemd-timesyncd.service"
+			systemctl enable systemd-timesyncd.service || true
+
+			#set our own initial date stamp, otherwise we get July 2014
+			touch /var/lib/systemd/clock
+			chown systemd-timesync:systemd-timesync /var/lib/systemd/clock
+
+			#Remove ntpdate
+			if [ -f /usr/sbin/ntpdate ] ; then
+				apt-get remove -y --force-yes ntpdate --purge || true
+			fi
+		fi
+	}
+
 	cleanup () {
 		mkdir -p /boot/uboot/
 
@@ -695,6 +734,16 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		fi
 		apt-get clean
 		rm -rf /var/lib/apt/lists/*
+
+		if [ -d /var/cache/cloud9-installer/ ] ; then
+			rm -rf /var/cache/cloud9-installer/ || true
+		fi
+		if [ -d /var/cache/ti-c6000-cgt-v8.0.x-installer/ ] ; then
+			rm -rf /var/cache/ti-c6000-cgt-v8.0.x-installer/ || true
+		fi
+		if [ -d /var/cache/ti-pru-cgt-installer/ ] ; then
+			rm -rf /var/cache/ti-pru-cgt-installer/ || true
+		fi
 
 		rm -f /usr/sbin/policy-rc.d
 
@@ -738,6 +787,10 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		dpkg_package_missing
 	fi
 
+	if [ -f /lib/systemd/systemd ] ; then
+		systemd_tweaks
+	fi
+
 	cleanup
 	rm -f /chroot_script.sh || true
 __EOF__
@@ -777,9 +830,18 @@ if [ "x${include_firmware}" = "xenable" ] ; then
 	fi
 fi
 
+if [ -n "${early_chroot_script}" -a -r "${DIR}/target/chroot/${early_chroot_script}" ] ; then
+	report_size
+	echo "Calling early_chroot_script script: ${early_chroot_script}"
+	sudo cp -v ${DIR}/.project ${tempdir}/etc/oib.project
+	sudo /bin/sh -e ${DIR}/target/chroot/${early_chroot_script} ${tempdir}
+	early_chroot_script=""
+	sudo rm -f ${tempdir}/etc/oib.project || true
+fi
+
 chroot_mount
-sudo chroot ${tempdir} /bin/sh chroot_script.sh
-echo "Log: Complete: [sudo chroot ${tempdir} /bin/sh chroot_script.sh]"
+sudo chroot ${tempdir} /bin/sh -e chroot_script.sh
+echo "Log: Complete: [sudo chroot ${tempdir} /bin/sh -e chroot_script.sh]"
 
 if [ ! "x${rfs_opt_scripts}" = "x" ] ; then
 	if [ ! -f ${tempdir}/opt/scripts/.git/config ] ; then
@@ -800,7 +862,7 @@ if [ -n "${chroot_script}" -a -r "${DIR}/target/chroot/${chroot_script}" ] ; the
 	echo "Calling chroot_script script: ${chroot_script}"
 	sudo cp -v ${DIR}/.project ${tempdir}/etc/oib.project
 	sudo cp -v ${DIR}/target/chroot/${chroot_script} ${tempdir}/final.sh
-	sudo chroot ${tempdir} /bin/sh final.sh
+	sudo chroot ${tempdir} /bin/sh -e final.sh
 	sudo rm -f ${tempdir}/final.sh || true
 	sudo rm -f ${tempdir}/etc/oib.project || true
 	chroot_script=""
