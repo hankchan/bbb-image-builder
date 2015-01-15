@@ -23,7 +23,7 @@
 export LC_ALL=C
 
 chromium_release="chromium-33.0.1750.117"
-u_boot_release="v2015.01-rc3"
+u_boot_release="v2015.01"
 
 #contains: rfs_username, release_date
 if [ -f /etc/rcn-ee.conf ] ; then
@@ -175,22 +175,6 @@ setup_desktop () {
 	#root password is blank, so remove useless application as it requires a password.
 	if [ -f /usr/share/applications/gksu.desktop ] ; then
 		rm -f /usr/share/applications/gksu.desktop || true
-	fi
-
-	#Add Website for Help:
-	echo "Support/FAQ: http://elinux.org/Beagleboard:BeagleBoneBlack_Debian" >> /etc/issue
-	echo "" >> /etc/issue
-
-	echo "" >> /etc/issue.net
-	cat /etc/dogtag >> /etc/issue.net
-	echo "" >> /etc/issue.net
-	echo "Support/FAQ: http://elinux.org/Beagleboard:BeagleBoneBlack_Debian" >> /etc/issue.net
-	echo "" >> /etc/issue.net
-	echo "password for: [$rfs_username] = [$rfs_password]" >> /etc/issue.net
-	echo "" >> /etc/issue.net
-
-	if [ -f /etc/ssh/sshd_config ] ; then
-		sed -i -e 's:#Banner:Banner:g' /etc/ssh/sshd_config
 	fi
 
 	#lxterminal doesnt reference .profile by default, so call via loginshell and start bash

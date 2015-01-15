@@ -10,9 +10,9 @@ export apt_proxy=apt-proxy:3142/
 ./RootStock-NG.sh -c bb.org-console-debian-stable
 ./RootStock-NG.sh -c bb.org-debian-next-4gb-v3.14
 
-debian_lxde_stable="debian-7.7-lxde-armhf-${time}"
-debian_lxde_4gb_stable="debian-7.7-lxde-4gb-armhf-${time}"
-debian_console_stable="debian-7.7-console-armhf-${time}"
+debian_lxde_stable="debian-7.8-lxde-armhf-${time}"
+debian_lxde_4gb_stable="debian-7.8-lxde-4gb-armhf-${time}"
+debian_console_stable="debian-7.8-console-armhf-${time}"
 debian_lxqt_next="debian-jessie-lxqt-armhf-${time}"
 archive="xz -z -8 -v"
 
@@ -58,38 +58,39 @@ compress_img () {
 base_rootfs="${debian_lxde_4gb_stable}"
 pre_generic_img
 
-options="--img-4gb BBB-blank-eMMC-flasher-\${base_rootfs} --dtb bbb-blank-eeprom --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher"
+options="--img-4gb BBB-blank-eMMC-flasher-\${base_rootfs} --dtb bbb-blank-eeprom --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher --hostname beaglebone"
 generic_img
-options="--img-4gb BBB-eMMC-flasher-\${base_rootfs}       --dtb beaglebone       --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc"
+options="--img-4gb BBB-eMMC-flasher-\${base_rootfs}       --dtb beaglebone       --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc --hostname beaglebone"
 generic_img
-options="--img-4gb bone-\${base_rootfs}                   --dtb beaglebone       --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --bbb-old-bootloader-in-emmc"
+options="--img-4gb bone-\${base_rootfs}                   --dtb beaglebone       --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --bbb-old-bootloader-in-emmc --hostname beaglebone"
 generic_img
 
 ###lxde images: (BBB: 2GB eMMC)
 base_rootfs="${debian_lxde_stable}"
 pre_generic_img
 
-options="--img-2gb BBB-eMMC-flasher-\${base_rootfs}       --dtb beaglebone       --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc"
+options="--img-2gb BBB-eMMC-flasher-\${base_rootfs} --dtb beaglebone --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc --hostname beaglebone"
 generic_img
 
 ###console images: (also single partition)
 base_rootfs="${debian_console_stable}"
 pre_generic_img
 
-options="--img-2gb BBB-eMMC-flasher-\${base_rootfs}       --dtb beaglebone       --boot_label BEAGLEBONE --enable-systemd --bbb-flasher --bbb-old-bootloader-in-emmc"
+options="--img-2gb BBB-eMMC-flasher-\${base_rootfs} --dtb beaglebone --boot_label BEAGLEBONE --enable-systemd --bbb-flasher --bbb-old-bootloader-in-emmc --hostname beaglebone"
 generic_img
-options="--img-2gb bone-\${base_rootfs}                   --dtb beaglebone       --boot_label BEAGLEBONE --enable-systemd --bbb-old-bootloader-in-emmc"
+options="--img-2gb bone-\${base_rootfs}             --dtb beaglebone --boot_label BEAGLEBONE --enable-systemd --bbb-old-bootloader-in-emmc --hostname beaglebone"
 generic_img
 
 ###lxqt image
 base_rootfs="${debian_lxqt_next}"
 pre_generic_img
 
-options="--img-2gb BBB-eMMC-flasher-\${base_rootfs}       --dtb beaglebone         --beagleboard.org-production --boot_label BEAGLEBONE --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc"
+options="--img-2gb BBB-eMMC-flasher-\${base_rootfs} --dtb beaglebone        --beagleboard.org-production --boot_label BEAGLEBONE --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc --hostname beaglebone"
 generic_img
-options="--img-2gb bbx15-\${base_rootfs}                  --dtb am57xx-beagle-x15"
+options="--img-2gb bbx15-\${base_rootfs}            --dtb am57xx-beagle-x15 --hostname BeagleBoard-X15"
 generic_img
-options="--img-2gb omap5-uevm-\${base_rootfs}             --dtb omap5-uevm"
+
+options="--img-2gb omap5-uevm-\${base_rootfs}       --dtb omap5-uevm        --hostname omap5-uevm"
 generic_img
 
 ###archive *.tar
@@ -129,7 +130,6 @@ compress_img
 
 wfile="omap5-uevm-${debian_lxqt_next}-2gb.img"
 compress_img
-
 
 __EOF__
 

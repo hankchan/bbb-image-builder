@@ -275,7 +275,7 @@ stretch|buster|sid)
 esac
 
 case "${deb_codename}" in
-wheezy)
+wheezy|jessie)
 	echo "" >> ${wfile}
 	echo "deb http://security.debian.org/ ${deb_codename}/updates ${deb_components}" >> ${wfile}
 	echo "#deb-src http://security.debian.org/ ${deb_codename}/updates ${deb_components}" >> ${wfile}
@@ -288,7 +288,7 @@ wheezy)
 		echo "##deb-src http://ftp.debian.org/debian ${deb_codename}-backports ${deb_components}" >> ${wfile}
 	fi
 	;;
-jessie)
+stretch)
 	echo "" >> ${wfile}
 	echo "#deb http://security.debian.org/ ${deb_codename}/updates ${deb_components}" >> ${wfile}
 	echo "##deb-src http://security.debian.org/ ${deb_codename}/updates ${deb_components}" >> ${wfile}
@@ -332,8 +332,13 @@ if [ "${apt_proxy}" ] ; then
 	sudo mv /tmp/apt.conf ${tempdir}/etc/apt/apt.conf
 fi
 
-echo "127.0.0.1       localhost" > /tmp/hosts
-echo "127.0.1.1       ${rfs_hostname}" >> /tmp/hosts
+echo "127.0.0.1	localhost" > /tmp/hosts
+echo "127.0.1.1	${rfs_hostname}.localdomain	${rfs_hostname}" >> /tmp/hosts
+echo "" >> /tmp/hosts
+echo "# The following lines are desirable for IPv6 capable hosts" >> /tmp/hosts
+echo "::1     localhost ip6-localhost ip6-loopback" >> /tmp/hosts
+echo "ff02::1 ip6-allnodes" >> /tmp/hosts
+echo "ff02::2 ip6-allrouters" >> /tmp/hosts
 sudo mv /tmp/hosts ${tempdir}/etc/hosts
 
 echo "${rfs_hostname}" > /tmp/hostname
@@ -370,8 +375,8 @@ echo "abi=${abi}" >> /tmp/rcn-ee.conf
 sudo mv /tmp/rcn-ee.conf ${tempdir}/etc/rcn-ee.conf
 
 #use /etc/dogtag for all:
-if [ ! "x${rts_etc_dogtag}" = "x" ] ; then
-	echo "${rts_etc_dogtag} ${time}" > /tmp/dogtag
+if [ ! "x${rfs_etc_dogtag}" = "x" ] ; then
+	echo "${rfs_etc_dogtag} ${time}" > /tmp/dogtag
 	sudo mv /tmp/dogtag ${tempdir}/etc/dogtag
 fi
 
@@ -464,8 +469,10 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		echo "[options]" > /etc/e2fsck.conf
 		echo "broken_system_clock = true" >> /etc/e2fsck.conf
 
-		if [ -f /etc/systemd/systemd-journald.conf ] ; then
-			sed -i -e 's:#SystemMaxUse=:SystemMaxUse=8M:g' /etc/systemd/systemd-journald.conf
+		if [ ! "x${rfs_ssh_banner}" = "x" ] || [ ! "x${rfs_ssh_user_pass}" = "x" ] ; then
+			if [ -f /etc/ssh/sshd_config ] ; then
+				sed -i -e 's:#Banner:Banner:g' /etc/ssh/sshd_config
+			fi
 		fi
 	}
 
@@ -537,28 +544,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		deb_file="linux-image-\${deb_file}.deb"
 		wget --directory-prefix=/tmp/ \${kernel_url}\${deb_file}
 
-		unset dtb_file
-		dtb_file=\$(cat /tmp/index.html | grep dtbs.tar.gz | head -n 1)
-		dtb_file=\$(echo \${dtb_file} | awk -F "\"" '{print \$2}')
-
-		if [ "\${dtb_file}" ] ; then
-			wget --directory-prefix=/boot/ \${kernel_url}\${dtb_file}
-		fi
-
 		dpkg -x /tmp/\${deb_file} /
-
-		if [ "x\${third_party_modules}" = "xenable" ] ; then
-			unset thirdparty_file
-			thirdparty_file=\$(cat /tmp/index.html | grep thirdparty)
-			thirdparty_file=\$(echo \${thirdparty_file} | awk -F "\"" '{print \$2}')
-			if [ "\${thirdparty_file}" ] ; then
-				wget --directory-prefix=/tmp/ \${kernel_url}\${thirdparty_file}
-
-				if [ -f /tmp/thirdparty ] ; then
-					/bin/sh /tmp/thirdparty
-				fi
-			fi
-		fi
 
 		pkg="initramfs-tools"
 		dpkg_check
@@ -621,9 +607,6 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 
 		mkdir -p /home/${rfs_username}/bin
 		chown ${rfs_username}:${rfs_username} /home/${rfs_username}/bin
-
-		echo "default username:password is [${rfs_username}:${rfs_password}]" >> /etc/issue
-		echo "" >> /etc/issue
 
 		case "\${distro}" in
 		Debian)
@@ -709,6 +692,10 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	systemd_tweaks () {
 		#We have systemd, so lets use it..
 
+		if [ -f /etc/systemd/systemd-journald.conf ] ; then
+			sed -i -e 's:#SystemMaxUse=:SystemMaxUse=8M:g' /etc/systemd/systemd-journald.conf
+		fi
+
 		#systemd v215: systemd-timesyncd.service replaces ntpdate
 		#enabled by default in v216 (not in jessie)
 		if [ -f /lib/systemd/system/systemd-timesyncd.service ] ; then
@@ -735,6 +722,9 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		apt-get clean
 		rm -rf /var/lib/apt/lists/*
 
+		if [ -d /var/cache/bbx15-ducati-firmware-installer/ ] ; then
+			rm -rf /var/cache/bbx15-ducati-firmware-installer/ || true
+		fi
 		if [ -d /var/cache/cloud9-installer/ ] ; then
 			rm -rf /var/cache/cloud9-installer/ || true
 		fi
@@ -843,6 +833,60 @@ chroot_mount
 sudo chroot ${tempdir} /bin/sh -e chroot_script.sh
 echo "Log: Complete: [sudo chroot ${tempdir} /bin/sh -e chroot_script.sh]"
 
+#Do /etc/issue & /etc/issue.net after chroot_script:
+#
+#Unpacking base-files (7.2ubuntu5.1) over (7.2ubuntu5) ...
+#Setting up base-files (7.2ubuntu5.1) ...
+#
+#Configuration file '/etc/issue'
+# ==> Modified (by you or by a script) since installation.
+# ==> Package distributor has shipped an updated version.
+#   What would you like to do about it ?  Your options are:
+#    Y or I  : install the package maintainer's version
+#    N or O  : keep your currently-installed version
+#      D     : show the differences between the versions
+#      Z     : start a shell to examine the situation
+# The default action is to keep your current version.
+#*** issue (Y/I/N/O/D/Z) [default=N] ? n
+
+if [ ! "x${rfs_console_banner}" = "x" ] || [ ! "x${rfs_console_user_pass}" = "x" ] ; then
+	wfile="/tmp/issue"
+	cat ${tempdir}/etc/issue > ${wfile}
+	if [ ! "x${rfs_etc_dogtag}" = "x" ] ; then
+		cat ${tempdir}/etc/dogtag >> ${wfile}
+		echo "" >> ${wfile}
+	fi
+	if [ ! "x${rfs_console_banner}" = "x" ] ; then
+		echo "${rfs_console_banner}" >> ${wfile}
+		echo "" >> ${wfile}
+	fi
+	if [ ! "x${rfs_console_user_pass}" = "x" ] ; then
+		echo "default username:password is [${rfs_username}:${rfs_password}]" >> ${wfile}
+		echo "" >> ${wfile}
+	fi
+	sudo mv ${wfile} ${tempdir}/etc/issue
+fi
+
+if [ ! "x${rfs_ssh_banner}" = "x" ] || [ ! "x${rfs_ssh_user_pass}" = "x" ] ; then
+	wfile="/tmp/issue.net"
+	cat ${tempdir}/etc/issue.net > ${wfile}
+	echo "" >> ${wfile}
+	if [ ! "x${rfs_etc_dogtag}" = "x" ] ; then
+		cat ${tempdir}/etc/dogtag >> ${wfile}
+		echo "" >> ${wfile}
+	fi
+	if [ ! "x${rfs_ssh_banner}" = "x" ] ; then
+		echo "${rfs_ssh_banner}" >> ${wfile}
+		echo "" >> ${wfile}
+	fi
+	if [ ! "x${rfs_ssh_user_pass}" = "x" ] ; then
+		echo "default username:password is [${rfs_username}:${rfs_password}]" >> ${wfile}
+		echo "" >> ${wfile}
+	fi
+	sudo mv ${wfile} ${tempdir}/etc/issue.net
+fi
+
+#usually a qemu failure...
 if [ ! "x${rfs_opt_scripts}" = "x" ] ; then
 	if [ ! -f ${tempdir}/opt/scripts/.git/config ] ; then
 		echo "Log: ERROR: git clone of ${rfs_opt_scripts} failed.."
@@ -895,25 +939,6 @@ fi
 
 if [ -f ${tempdir}/usr/bin/qemu-arm-static ] ; then
 	sudo rm -f ${tempdir}/usr/bin/qemu-arm-static || true
-fi
-
-if [ "${rfs_kernel}" ] ; then
-	if ls ${tempdir}/boot/vmlinuz-* >/dev/null 2>&1 ; then
-		sudo cp -v ${tempdir}/boot/vmlinuz-* ${DIR}/deploy/${export_filename}/
-	else
-		if [ "${rfs_kernel}" ] ; then
-			echo "Log: ERROR: kernel install failure..."
-			exit 1
-		fi
-	fi
-
-	if ls ${tempdir}/boot/initrd.img-* >/dev/null 2>&1 ; then
-		sudo cp -v ${tempdir}/boot/initrd.img-* ${DIR}/deploy/${export_filename}/
-	fi
-
-	if ls ${tempdir}/boot/*dtbs.tar.gz >/dev/null 2>&1 ; then
-		sudo cp -v ${tempdir}/boot/*dtbs.tar.gz ${DIR}/deploy/${export_filename}/
-	fi
 fi
 
 echo "${rfs_username}:${rfs_password}" > /tmp/user_password.list

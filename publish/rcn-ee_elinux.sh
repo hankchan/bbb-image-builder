@@ -10,7 +10,7 @@ export apt_proxy=apt-proxy:3142/
 
 ./RootStock-NG.sh -c rcn-ee_console_ubuntu_stable_armhf
 
-debian_stable="debian-7.7-console-armhf-${time}"
+debian_stable="debian-7.8-console-armhf-${time}"
 debian_testing="debian-jessie-console-armhf-${time}"
 
 ubuntu_stable="ubuntu-14.04.1-console-armhf-${time}"
@@ -31,6 +31,7 @@ sudo ./setup_sdcard.sh --img bone-${debian_stable} --dtb beaglebone --enable-sys
 sudo ./setup_sdcard.sh --img bb-${debian_stable} --dtb omap3-beagle --enable-systemd
 sudo ./setup_sdcard.sh --img bbxm-${debian_stable} --dtb omap3-beagle-xm --enable-systemd
 sudo ./setup_sdcard.sh --img omap5-uevm-${debian_stable} --dtb omap5-uevm --enable-systemd
+sudo ./setup_sdcard.sh --img bbx15-${debian_stable} --dtb am57xx-beagle-x15 --enable-systemd
 mv *.img ../
 cd ..
 rm -rf ${debian_stable}/ || true
@@ -41,6 +42,7 @@ sudo ./setup_sdcard.sh --img bone-${ubuntu_stable}.img --dtb beaglebone --bbb-ol
 sudo ./setup_sdcard.sh --img bb-${ubuntu_stable}.img --dtb omap3-beagle
 sudo ./setup_sdcard.sh --img bbxm-${ubuntu_stable}.img --dtb omap3-beagle-xm
 sudo ./setup_sdcard.sh --img omap5-uevm-${ubuntu_stable}.img --dtb omap5-uevm
+sudo ./setup_sdcard.sh --img bbx15-${ubuntu_stable} --dtb am57xx-beagle-x15
 mv *.img ../
 cd ..
 rm -rf ${ubuntu_stable}/ || true
@@ -52,11 +54,13 @@ ${archive} bone-${debian_stable}-2gb.img
 ${archive} bb-${debian_stable}-2gb.img
 ${archive} bbxm-${debian_stable}-2gb.img
 ${archive} omap5-uevm-${debian_stable}-2gb.img
+${archive} bbx15-${debian_stable}-2gb.img
 ${archive} BBB-eMMC-flasher-${ubuntu_stable}-2gb.img
 ${archive} bone-${ubuntu_stable}-2gb.img
 ${archive} bb-${ubuntu_stable}-2gb.img
 ${archive} bbxm-${ubuntu_stable}-2gb.img
 ${archive} omap5-uevm-${ubuntu_stable}-2gb.img
+${archive} bbx15-${ubuntu_stable}-2gb.img
 
 __EOF__
 
