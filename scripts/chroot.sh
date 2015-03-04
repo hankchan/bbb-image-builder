@@ -1,6 +1,6 @@
 #!/bin/sh -e
 #
-# Copyright (c) 2012-2014 Robert Nelson <robertcnelson@gmail.com>
+# Copyright (c) 2012-2015 Robert Nelson <robertcnelson@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,15 @@ check_defines () {
 	if [ ! "${tempdir}" ] ; then
 		echo "scripts/deboostrap_first_stage.sh: Error: tempdir undefined"
 		exit 1
+	fi
+
+	cd ${tempdir}/
+	test_tempdir=$(pwd -P)
+	cd ${DIR}/
+
+	if [ ! "x${tempdir}" = "x${test_tempdir}" ] ; then
+		tempdir="${test_tempdir}"
+		echo "Log: tempdir is really: [${test_tempdir}]"
 	fi
 
 	if [ ! "${export_filename}" ] ; then
@@ -150,15 +159,36 @@ chroot_mount () {
 
 chroot_umount () {
 	if [ "$(mount | grep ${tempdir}/dev/pts | awk '{print $3}')" = "${tempdir}/dev/pts" ] ; then
-		sudo umount -f ${tempdir}/dev/pts
+		echo "Log: umount: [${tempdir}/dev/pts]"
+		sync
+		sudo umount -fl ${tempdir}/dev/pts
+
+		if [ "$(mount | grep ${tempdir}/dev/pts | awk '{print $3}')" = "${tempdir}/dev/pts" ] ; then
+			echo "Log: ERROR: umount [${tempdir}/dev/pts] failed..."
+			exit 1
+		fi
 	fi
 
 	if [ "$(mount | grep ${tempdir}/proc | awk '{print $3}')" = "${tempdir}/proc" ] ; then
-		sudo umount -f ${tempdir}/proc
+		echo "Log: umount: [${tempdir}/proc]"
+		sync
+		sudo umount -fl ${tempdir}/proc
+
+		if [ "$(mount | grep ${tempdir}/proc | awk '{print $3}')" = "${tempdir}/proc" ] ; then
+			echo "Log: ERROR: umount [${tempdir}/proc] failed..."
+			exit 1
+		fi
 	fi
 
 	if [ "$(mount | grep ${tempdir}/sys | awk '{print $3}')" = "${tempdir}/sys" ] ; then
-		sudo umount -f ${tempdir}/sys
+		echo "Log: umount: [${tempdir}/sys]"
+		sync
+		sudo umount -fl ${tempdir}/sys
+
+		if [ "$(mount | grep ${tempdir}/sys | awk '{print $3}')" = "${tempdir}/sys" ] ; then
+			echo "Log: ERROR: umount [${tempdir}/sys] failed..."
+			exit 1
+		fi
 	fi
 }
 
@@ -346,10 +376,20 @@ sudo mv /tmp/hostname ${tempdir}/etc/hostname
 
 case "${deb_distribution}" in
 debian)
-	sudo cp ${OIB_DIR}/target/init_scripts/generic-${deb_distribution}.sh ${tempdir}/etc/init.d/generic-boot-script.sh
-	sudo cp ${OIB_DIR}/target/init_scripts/capemgr-${deb_distribution}.sh ${tempdir}/etc/init.d/capemgr.sh
-	sudo cp ${OIB_DIR}/target/init_scripts/capemgr ${tempdir}/etc/default/
-	distro="Debian"
+	case "${deb_codename}" in
+	wheezy)
+		sudo cp ${OIB_DIR}/target/init_scripts/generic-${deb_distribution}.sh ${tempdir}/etc/init.d/generic-boot-script.sh
+		sudo cp ${OIB_DIR}/target/init_scripts/capemgr-${deb_distribution}.sh ${tempdir}/etc/init.d/capemgr.sh
+		sudo cp ${OIB_DIR}/target/init_scripts/capemgr ${tempdir}/etc/default/
+		distro="Debian"
+		;;
+	jessie|stretch)
+		sudo cp ${OIB_DIR}/target/init_scripts/systemd-generic-board-startup.service ${tempdir}/lib/systemd/system/generic-board-startup.service
+		sudo cp ${OIB_DIR}/target/init_scripts/systemd-capemgr.service ${tempdir}/lib/systemd/system/capemgr.service
+		sudo cp ${OIB_DIR}/target/init_scripts/capemgr ${tempdir}/etc/default/
+		distro="Debian"
+		;;
+	esac
 	;;
 ubuntu)
 	sudo cp ${OIB_DIR}/target/init_scripts/generic-${deb_distribution}.conf ${tempdir}/etc/init/generic-boot-script.conf
@@ -409,6 +449,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	}
 
 	stop_init () {
+		echo "Log: (chroot): setting up: /usr/sbin/policy-rc.d"
 		cat > /usr/sbin/policy-rc.d <<EOF
 		#!/bin/sh
 		exit 101
@@ -455,7 +496,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		if [ "x${chroot_enable_debian_backports}" = "xenable" ] ; then
 			if [ ! "x${chroot_debian_backports_pkg_list}" = "x" ] ; then
 				echo "Log: (chroot) Installing (from backports): ${chroot_debian_backports_pkg_list}"
-				sudo apt-get -y --force-yes install ${chroot_debian_backports_pkg_list}
+				sudo apt-get -y --force-yes -t ${deb_codename}-backports install ${chroot_debian_backports_pkg_list}
 			fi
 		fi
 
@@ -466,6 +507,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	}
 
 	system_tweaks () {
+		echo "Log: (chroot): system_tweaks"
 		echo "[options]" > /etc/e2fsck.conf
 		echo "broken_system_clock = true" >> /etc/e2fsck.conf
 
@@ -477,6 +519,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	}
 
 	set_locale () {
+		echo "Log: (chroot): set_locale"
 		pkg="locales"
 		dpkg_check
 
@@ -505,6 +548,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	}
 
 	run_deborphan () {
+		echo "Log: (chroot): deborphan is not reliable, run manual and add pkg list to: [chroot_manual_deborphan_list]"
 		apt-get -y --force-yes install deborphan
 
 		# Prevent deborphan from removing explicitly required packages
@@ -520,7 +564,17 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		apt-get clean
 	}
 
+	manual_deborphan () {
+		echo "Log: (chroot): manual_deborphan"
+		if [ ! "x${chroot_manual_deborphan_list}" = "x" ] ; then
+			echo "Log: (chroot): cleanup: [${chroot_manual_deborphan_list}]"
+			apt-get -y remove ${chroot_manual_deborphan_list} --purge
+			apt-get clean
+		fi
+	}
+
 	dl_kernel () {
+		echo "Log: (chroot): dl_kernel"
 		wget --no-verbose --directory-prefix=/tmp/ \${kernel_url}
 
 		#This should create a list of files on the server
@@ -573,6 +627,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	}
 
 	add_user () {
+		echo "Log: (chroot): add_user"
 		groupadd -r admin || true
 		groupadd -r spi || true
 
@@ -583,6 +638,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		cat /etc/group | grep ^weston-launch || groupadd -r weston-launch || true
 		cat /etc/group | grep ^xenomai || groupadd -r xenomai || true
 
+		echo "KERNEL==\"hidraw*\", GROUP=\"plugdev\", MODE=\"0660\"" > /etc/udev/rules.d/50-hidraw.rules
 		echo "KERNEL==\"spidev*\", GROUP=\"spi\", MODE=\"0660\"" > /etc/udev/rules.d/50-spi.rules
 
 		default_groups="admin,adm,dialout,i2c,kmem,spi,cdrom,floppy,audio,dip,video,netdev,plugdev,users,systemd-journal,weston-launch,xenomai"
@@ -632,6 +688,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	}
 
 	debian_startup_script () {
+		echo "Log: (chroot): debian_startup_script"
 		if [ "x${rfs_startup_scripts}" = "xenable" ] ; then
 			if [ -f /etc/init.d/generic-boot-script.sh ] ; then
 				chown root:root /etc/init.d/generic-boot-script.sh
@@ -649,6 +706,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	}
 
 	ubuntu_startup_script () {
+		echo "Log: (chroot): ubuntu_startup_script"
 		if [ "x${rfs_startup_scripts}" = "xenable" ] ; then
 			if [ -f /etc/init/generic-boot-script.conf ] ; then
 				chown root:root /etc/init/generic-boot-script.conf
@@ -663,6 +721,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	}
 
 	startup_script () {
+		echo "Log: (chroot): startup_script"
 		case "\${distro}" in
 		Debian)
 			debian_startup_script
@@ -672,13 +731,21 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 			;;
 		esac
 
+		if [ -f /lib/systemd/system/generic-board-startup.service ] ; then
+			systemctl enable generic-board-startup.service || true
+		fi
+
+		if [ -f /lib/systemd/system/capemgr.service ] ; then
+			systemctl enable capemgr.service || true
+		fi
+
 		if [ ! "x${rfs_opt_scripts}" = "x" ] ; then
+			mkdir -p /opt/scripts/ || true
 
 			if [ -f /usr/bin/git ] ; then
-				mkdir -p /opt/scripts/ || true
-				qemu_command="git clone ${rfs_opt_scripts} /opt/scripts/ --depth 1 || true"
+				qemu_command="git clone ${rfs_opt_scripts} /opt/scripts/ --depth 1"
 				qemu_warning
-				git clone ${rfs_opt_scripts} /opt/scripts/ --depth 1 || true
+				git clone -v ${rfs_opt_scripts} /opt/scripts/ --depth 1
 				sync
 				if [ -f /opt/scripts/.git/config ] ; then
 					echo "/opt/scripts/ : ${rfs_opt_scripts}" >> /opt/source/list.txt
@@ -690,6 +757,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	}
 
 	systemd_tweaks () {
+		echo "Log: (chroot): systemd_tweaks"
 		#We have systemd, so lets use it..
 
 		if [ -f /etc/systemd/systemd-journald.conf ] ; then
@@ -711,9 +779,20 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 				apt-get remove -y --force-yes ntpdate --purge || true
 			fi
 		fi
+
+		if [ -f /opt/scripts/mods/jessie-systemd-poweroff.diff ] ; then
+			if [ -f /usr/bin/patch ] ; then
+				if [ -f /lib/udev/rules.d/70-power-switch.rules ] ; then
+					patch -p1 < /opt/scripts/mods/jessie-systemd-poweroff.diff
+				else
+					patch -p1 < /opt/scripts/mods/wheezy-systemd-poweroff.diff
+				fi
+			fi
+		fi
 	}
 
 	cleanup () {
+		echo "Log: (chroot): cleanup"
 		mkdir -p /boot/uboot/
 
 		if [ -f /etc/apt/apt.conf ] ; then
@@ -756,9 +835,10 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	install_pkgs
 	system_tweaks
 	set_locale
-	if [ "x${chroot_very_small_image}" = "xenable" ] ; then
+	if [ "x${chroot_not_reliable_deborphan}" = "xenable" ] ; then
 		run_deborphan
 	fi
+	manual_deborphan
 	add_user
 
 	mkdir -p /opt/source || true
@@ -850,6 +930,7 @@ echo "Log: Complete: [sudo chroot ${tempdir} /bin/sh -e chroot_script.sh]"
 #*** issue (Y/I/N/O/D/Z) [default=N] ? n
 
 if [ ! "x${rfs_console_banner}" = "x" ] || [ ! "x${rfs_console_user_pass}" = "x" ] ; then
+	echo "Log: setting up: /etc/issue"
 	wfile="/tmp/issue"
 	cat ${tempdir}/etc/issue > ${wfile}
 	if [ ! "x${rfs_etc_dogtag}" = "x" ] ; then
@@ -868,6 +949,7 @@ if [ ! "x${rfs_console_banner}" = "x" ] || [ ! "x${rfs_console_user_pass}" = "x"
 fi
 
 if [ ! "x${rfs_ssh_banner}" = "x" ] || [ ! "x${rfs_ssh_user_pass}" = "x" ] ; then
+	echo "Log: setting up: /etc/issue.net"
 	wfile="/tmp/issue.net"
 	cat ${tempdir}/etc/issue.net > ${wfile}
 	echo "" >> ${wfile}
@@ -888,9 +970,14 @@ fi
 
 #usually a qemu failure...
 if [ ! "x${rfs_opt_scripts}" = "x" ] ; then
-	if [ ! -f ${tempdir}/opt/scripts/.git/config ] ; then
-		echo "Log: ERROR: git clone of ${rfs_opt_scripts} failed.."
-		exit 1
+	#we might not have read permissions:
+	if [ -r ${tempdir}/opt/scripts/ ] ; then
+		if [ ! -f ${tempdir}/opt/scripts/.git/config ] ; then
+			echo "Log: ERROR: git clone of ${rfs_opt_scripts} failed.."
+			exit 1
+		fi
+	else
+		echo "Log: unable to test /opt/scripts/.git/config no read permissions, assuming git clone success"
 	fi
 fi
 

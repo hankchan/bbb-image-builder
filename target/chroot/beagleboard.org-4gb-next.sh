@@ -91,13 +91,6 @@ setup_system () {
 		fi
 	fi
 
-	if [ -f /opt/scripts/mods/jessie-systemd-poweroff.diff ] ; then
-		if [ -f /usr/bin/patch ] ; then
-			echo "Patching: /lib/udev/rules.d/70-power-switch.rules"
-			patch -p1 < /opt/scripts/mods/jessie-systemd-poweroff.diff
-		fi
-	fi
-
 	if [ -f /opt/scripts/boot/am335x_evm.sh ] ; then
 		if [ -f /lib/systemd/system/serial-getty@.service ] ; then
 			cp /lib/systemd/system/serial-getty@.service /etc/systemd/system/serial-getty@ttyGS0.service
@@ -205,18 +198,6 @@ setup_desktop () {
 	if [ -f /bin/ping ] ; then
 		chmod u+x /bin/ping
 	fi
-
-	if [ -f /etc/dnsmasq.conf ] ; then
-		wfile="/etc/dnsmasq.d/usb0-dhcp"
-		echo "#disable DNS by setting port to 0" > ${wfile}
-		echo "port=0" >> ${wfile}
-		echo "" >> ${wfile}
-		echo "interface=usb0" >> ${wfile}
-		echo "#one address range" >> ${wfile}
-		echo "dhcp-range=192.168.7.1,192.168.7.1" >> ${wfile}
-		echo "" >> ${wfile}
-		echo "dhcp-option=3" >> ${wfile}
-	fi
 }
 
 cleanup_npm_cache () {
@@ -296,10 +277,6 @@ install_node_pkgs () {
 			if [ -f ${git_target_dir}/.git/config ] ; then
 				chown -R ${rfs_username}:${rfs_username} ${git_target_dir}
 				cd ${git_target_dir}/
-
-				#patch around jekyll always regenerating from cloud9 changes..
-				echo "baseurl: /bone101" > /var/lib/cloud9/_config.yml
-				echo "timezone: America/New_York" >>  /var/lib/cloud9/_config.yml
 
 				echo "jekyll pre-building bone101"
 				/usr/local/bin/jekyll build --destination bone101

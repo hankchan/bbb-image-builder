@@ -636,7 +636,7 @@ populate_boot () {
 		echo "initrd_high=0xffffffff" >> ${wfile}
 		echo "fdt_high=0xffffffff" >> ${wfile}
 		echo "" >> ${wfile}
-		echo "##These are needed to be compliant with Debian 2014-05-14 u-boot." > ${wfile}
+		echo "##These are needed to be compliant with Debian 2014-05-14 u-boot." >> ${wfile}
 		echo "" >> ${wfile}
 		echo "loadximage=load mmc 0:${media_rootfs_partition} \${loadaddr} /boot/vmlinuz-\${uname_r}" >> ${wfile}
 		echo "loadxfdt=load mmc 0:${media_rootfs_partition} \${fdtaddr} /boot/dtbs/\${uname_r}/\${fdtfile}" >> ${wfile}
@@ -745,6 +745,15 @@ kernel_detection () {
 		echo "Debug: image has: v${ti_dt_kernel}"
 		has_ti_kernel="enable"
 	fi
+
+	unset has_xenomai_kernel
+	unset check
+	check=$(ls "${dir_check}" | grep vmlinuz- | grep xenomai | head -n 1)
+	if [ "x${check}" != "x" ] ; then
+		xenomai_dt_kernel=$(ls "${dir_check}" | grep vmlinuz- | grep xenomai | head -n 1 | awk -F'vmlinuz-' '{print $2}')
+		echo "Debug: image has: v${xenomai_dt_kernel}"
+		has_xenomai_kernel="enable"
+	fi
 }
 
 kernel_select () {
@@ -774,6 +783,10 @@ kernel_select () {
 			else
 				if [ "x${has_multi_armv7_kernel}" = "xenable" ] ; then
 					select_kernel="${armv7_kernel}"
+				else
+					if [ "x${has_xenomai_kernel}" = "xenable" ] ; then
+						select_kernel="${xenomai_dt_kernel}"
+					fi
 				fi
 			fi
 		fi
@@ -852,14 +865,12 @@ populate_rootfs () {
 	else
 		echo "uname_r=${kernel_override}" >> ${wfile}
 	fi
-	echo "" >> ${wfile}
 
 	if [ ! "x${dtb}" = "x" ] ; then
 		echo "dtb=${dtb}" >> ${wfile}
 	else
 		echo "#dtb=" >> ${wfile}
 	fi
-	echo "" >> ${wfile}
 
 	if [ ! "x${rootfs_uuid}" = "x" ] ; then
 		echo "uuid=${rootfs_uuid}" >> ${wfile}
@@ -890,13 +901,15 @@ populate_rootfs () {
 	if [ ! "x${has_post_uenvtxt}" = "x" ] ; then
 		cat "${DIR}/post-uEnv.txt" >> ${wfile}
 		echo "" >> ${wfile}
-		echo "" >> ${wfile}
 	fi
 
 	if [ "x${conf_board}" = "xam335x_boneblack" ] || [ "x${conf_board}" = "xam335x_evm" ] ; then
 		if [ "x${bbb_flasher}" = "xenable" ] ; then
 			echo "##enable BBB: eMMC Flasher:" >> ${wfile}
 			echo "cmdline=init=/opt/scripts/tools/eMMC/init-eMMC-flasher-v3.sh" >> ${wfile}
+		elif [ "x${bbg_flasher}" = "xenable" ] ; then
+			echo "##enable BBG: eMMC Flasher:" >> ${wfile}
+			echo "cmdline=init=/opt/scripts/tools/eMMC/init-eMMC-flasher-v3-bbg.sh" >> ${wfile}
 		else
 			echo "##enable BBB: eMMC Flasher:" >> ${wfile}
 			echo "##make sure, these tools are installed: dosfstools rsync" >> ${wfile}
@@ -931,11 +944,14 @@ populate_rootfs () {
 		echo "debugfs  /sys/kernel/debug  debugfs  defaults  0  0" >> ${wfile}
 
 		if [ "x${distro}" = "xDebian" ] ; then
-			wfile="${TEMPDIR}/disk/etc/inittab"
-			serial_num=$(echo -n "${SERIAL}"| tail -c -1)
-			echo "" >> ${wfile}
-			echo "T${serial_num}:23:respawn:/sbin/getty -L ${SERIAL} 115200 vt102" >> ${wfile}
-			echo "" >> ${wfile}
+			#/etc/inittab is gone in Jessie with systemd...
+			if [ -f ${TEMPDIR}/disk/etc/inittab ] ; then
+				wfile="${TEMPDIR}/disk/etc/inittab"
+				serial_num=$(echo -n "${SERIAL}"| tail -c -1)
+				echo "" >> ${wfile}
+				echo "T${serial_num}:23:respawn:/sbin/getty -L ${SERIAL} 115200 vt102" >> ${wfile}
+				echo "" >> ${wfile}
+			fi
 		fi
 
 		if [ "x${distro}" = "xUbuntu" ] ; then
@@ -1047,6 +1063,14 @@ populate_rootfs () {
 		cp -v ${TEMPDIR}/dl/${SPL} ${TEMPDIR}/disk/opt/backup/uboot/${spl_uboot_name}
 	fi
 
+	file="/etc/udev/rules.d/60-omap-tty.rules"
+	echo "#from: http://arago-project.org/git/meta-ti.git?a=commit;h=4ce69eff28103778508d23af766e6204c95595d3" > ${TEMPDIR}/disk${file}
+	echo "" > ${TEMPDIR}/disk${file}
+	echo "# Backward compatibility with old OMAP UART-style ttyO0 naming" > ${TEMPDIR}/disk${file}
+	echo "" >> ${TEMPDIR}/disk${file}
+	echo "SUBSYSTEM==\"tty\", ATTR{uartclk}!=\"0\", KERNEL==\"ttyS[0-9]\", SYMLINK+=\"ttyO%n\"" >> ${TEMPDIR}/disk${file}
+	echo "" >> ${TEMPDIR}/disk${file}
+
 	if [ "x${conf_board}" = "xam335x_boneblack" ] || [ "x${conf_board}" = "xam335x_evm" ] ; then
 
 		file="/etc/udev/rules.d/70-persistent-net.rules"
@@ -1055,22 +1079,24 @@ populate_rootfs () {
 		echo "# udevadm info -q all -p /sys/class/net/eth0 --attribute-walk" >> ${TEMPDIR}/disk${file}
 		echo "" >> ${TEMPDIR}/disk${file}
 		echo "# BeagleBone: net device ()" >> ${TEMPDIR}/disk${file}
-		echo "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\"eth0\"" >> ${TEMPDIR}/disk${file}
+		echo "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"cpsw\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\"eth0\"" >> ${TEMPDIR}/disk${file}
 		echo "" >> ${TEMPDIR}/disk${file}
+	fi
 
-		git_rcn_boot="https://raw.githubusercontent.com/RobertCNelson/boot-scripts/master/tools"
+	if [ -f ${TEMPDIR}/disk/etc/dnsmasq.conf ] ; then
+		wfile="/etc/dnsmasq.d/usb0-dhcp"
+		echo "#disable DNS by setting port to 0" > ${TEMPDIR}/disk${wfile}
+		echo "port=0" >> ${TEMPDIR}/disk${wfile}
+		echo "" >> ${TEMPDIR}/disk${wfile}
+		echo "interface=usb0" >> ${TEMPDIR}/disk${wfile}
+		echo "#one address range" >> ${TEMPDIR}/disk${wfile}
+		echo "dhcp-range=192.168.7.1,192.168.7.1" >> ${TEMPDIR}/disk${wfile}
+		echo "" >> ${TEMPDIR}/disk${wfile}
+		echo "dhcp-option=3" >> ${TEMPDIR}/disk${wfile}
+	fi
 
-		if [ ! -f ${TEMPDIR}/disk/opt/scripts/tools/grow_partition.sh ] ; then
-			mkdir -p ${TEMPDIR}/disk/opt/scripts/tools/
-			${dl_quiet} --directory-prefix="${TEMPDIR}/disk/opt/scripts/tools/" ${git_rcn_boot}/grow_partition.sh
-			sudo chmod +x ${TEMPDIR}/disk/opt/scripts/tools/grow_partition.sh
-		fi
-
-		if [ ! -f ${TEMPDIR}/disk/opt/scripts/tools/eMMC/init-eMMC-flasher-v3.sh ] ; then
-			mkdir -p ${TEMPDIR}/disk/opt/scripts/tools/eMMC/
-			${dl_quiet} --directory-prefix="${TEMPDIR}/disk/opt/scripts/tools/eMMC/" ${git_rcn_boot}/eMMC/init-eMMC-flasher-v3.sh
-			sudo chmod +x ${TEMPDIR}/disk/opt/scripts/tools/eMMC/init-eMMC-flasher-v3.sh
-		fi
+	if [ ! -f ${TEMPDIR}/disk/opt/scripts/boot/generic-startup.sh ] ; then
+		git clone https://github.com/RobertCNelson/boot-scripts ${TEMPDIR}/disk/opt/scripts/ --depth 1
 	fi
 
 	if [ "x${conf_board}" = "xomap5_uevm" ] || [ "x${conf_board}" = "xbeagle_x15" ] ; then
@@ -1331,6 +1357,9 @@ while [ ! -z "$1" ] ; do
 		;;
 	--bbb-flasher)
 		bbb_flasher="enable"
+		;;
+	--bbg-flasher)
+		bbg_flasher="enable"
 		;;
 	--beagleboard.org-production)
 		bborg_production="enable"
