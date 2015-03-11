@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #
-# Copyright (c) 2009-2014 Robert Nelson <robertcnelson@gmail.com>
+# Copyright (c) 2009-2015 Robert Nelson <robertcnelson@gmail.com>
 # Copyright (c) 2010 Mario Di Francesco <mdf-code@digitalexile.it>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -981,28 +981,27 @@ populate_rootfs () {
 			echo "iface eth0 inet dhcp" >> ${wfile}
 		fi
 
-		if [ "${ENABLE_CAN}" ] ; then
-		    # CANbus for BMS
-		    echo "" >> ${wfile}
-			echo "allow-hotplug can0" >> ${wfile}
-			echo "iface can0 can static" >> ${wfile}
-			echo "    bitrate 125000" >> ${wfile}
-                                 
-            # CANbus for Charger
-            echo "" >> ${wfile}
-			echo "allow-hotplug can1" >> ${wfile}
-			echo "iface can1 can static" >> ${wfile}
-			echo "    bitrate 250000" >> ${wfile}
+	    # CANbus for BMS
+	    echo "" >> ${wfile}
+		echo "allow-hotplug can0" >> ${wfile}
+		echo "iface can0 can static" >> ${wfile}
+		echo "    bitrate 125000" >> ${wfile}
+                             
+        # CANbus for Charger
+        echo "" >> ${wfile}
+		echo "allow-hotplug can1" >> ${wfile}
+		echo "iface can1 can static" >> ${wfile}
+		echo "    bitrate 250000" >> ${wfile}
 
-            # CANbus for Motor/EV
-            echo "" >> ${wfile}
-			echo "allow-hotplug can2" >> ${wfile}
-			echo "iface can2 can static" >> ${wfile}
-			echo "    bitrate 250000" >> ${wfile}
-			echo "" >> ${wfile}
-		fi
+        # CANbus for Motor/EV
+        echo "" >> ${wfile}
+		echo "allow-hotplug can2" >> ${wfile}
+		echo "iface can2 can static" >> ${wfile}
+		echo "    bitrate 250000" >> ${wfile}
+		echo "" >> ${wfile}
 
-		#if we have systemd & wicd-gtk, diable eth0 in /etc/network/interfaces
+
+	    #if we have systemd & wicd-gtk, diable eth0 in /etc/network/interfaces
 		if [ -f ${TEMPDIR}/disk/lib/systemd/systemd ] ; then
 			if [ -f ${TEMPDIR}/disk/usr/bin/wicd-gtk ] ; then
 				sed -i 's/auto eth0/#auto eth0/g' ${wfile}
@@ -1099,12 +1098,17 @@ populate_rootfs () {
 		git clone https://github.com/RobertCNelson/boot-scripts ${TEMPDIR}/disk/opt/scripts/ --depth 1
 	fi
 
-	if [ "x${conf_board}" = "xomap5_uevm" ] || [ "x${conf_board}" = "xbeagle_x15" ] ; then
+	if [ "x${drm}" = "xomapdrm" ] ; then
 		wfile="/etc/X11/xorg.conf"
 		if [ -f ${TEMPDIR}/disk${wfile} ] ; then
 			sudo sed -i -e 's:modesetting:omap:g' ${TEMPDIR}/disk${wfile}
 			sudo sed -i -e 's:fbdev:omap:g' ${TEMPDIR}/disk${wfile}
-			sudo sed -i -e 's:16:24:g' ${TEMPDIR}/disk${wfile}
+
+			if [ "x${conf_board}" = "xomap3_beagle" ] ; then
+				sudo sed -i -e 's:#HWcursor_false::g' ${TEMPDIR}/disk${wfile}
+			else
+				sudo sed -i -e 's:16:24:g' ${TEMPDIR}/disk${wfile}
+			fi
 		fi
 	fi
 
