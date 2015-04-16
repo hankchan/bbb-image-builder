@@ -544,6 +544,7 @@ install_hsbms () {
 		sed -i -e '/ATZ/aOK              AT+CGPSPWR=1' /etc/chatscripts/pap
 		sed -i -e '/CGPSPWR/aOK              AT+CGPSRST=1' /etc/chatscripts/pap
 		sed -i -e '/CGPSRST/aOK              AT+CGPSIPR=115200' /etc/chatscripts/pap
+        sed -i -e '/CGPSIPR/aOK              AT+CGPSOUT=145' /etc/chatscripts/pap
         sed -i -e '/CGPSIPR/aOK              AT+CGDCONT=1,"IP","3gnet",,0,0' /etc/chatscripts/pap
 	fi
 
