@@ -192,6 +192,8 @@ chroot_umount () {
 	fi
 }
 
+trap chroot_umount EXIT
+
 check_defines
 
 if [ "x${host_arch}" != "xarmv7l" ] ; then
@@ -477,6 +479,25 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 
 		apt-get update
 		apt-get upgrade -y --force-yes
+
+		if [ "x${chroot_very_small_image}" = "xenable" ] ; then
+			if [ -f /bin/busybox ] ; then
+				echo "Log: (chroot): Setting up BusyBox"
+
+				busybox --install -s /usr/local/bin/
+
+				#conflicts with systemd reboot...
+				if [ -f /usr/local/bin/reboot ] ; then
+					rm -f /usr/local/bin/reboot
+				fi
+
+				#tar: unrecognized option '--warning=no-timestamp'
+				#BusyBox v1.22.1 (Debian 1:1.22.0-9+deb8u1) multi-call binary.
+				if [ -f /usr/local/bin/tar ] ; then
+					rm -f /usr/local/bin/tar
+				fi
+			fi
+		fi
 	}
 
 	install_pkgs () {
@@ -509,7 +530,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 	system_tweaks () {
 		echo "Log: (chroot): system_tweaks"
 		echo "[options]" > /etc/e2fsck.conf
-		echo "broken_system_clock = true" >> /etc/e2fsck.conf
+		echo "broken_system_clock = 1" >> /etc/e2fsck.conf
 
 		if [ ! "x${rfs_ssh_banner}" = "x" ] || [ ! "x${rfs_ssh_user_pass}" = "x" ] ; then
 			if [ -f /etc/ssh/sshd_config ] ; then
@@ -559,7 +580,7 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		# Purge keep file
 		deborphan -Z
 
-		#FIXME, only tested on wheezy...
+		#FIXME, only tested on wheezy/jessie...
 		apt-get -y remove deborphan dialog gettext-base libasprintf0c2 --purge
 		apt-get clean
 	}
@@ -801,11 +822,11 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		apt-get clean
 		rm -rf /var/lib/apt/lists/*
 
-		if [ -d /var/cache/bbx15-ducati-firmware-installer/ ] ; then
-			rm -rf /var/cache/bbx15-ducati-firmware-installer/ || true
+		if [ -d /var/cache/c9-core-installer/ ] ; then
+			rm -rf /var/cache/c9-core-installer/ || true
 		fi
-		if [ -d /var/cache/cloud9-installer/ ] ; then
-			rm -rf /var/cache/cloud9-installer/ || true
+		if [ -d /var/cache/ipumm-dra7xx-installer/ ] ; then
+			rm -rf /var/cache/ipumm-dra7xx-installer/ || true
 		fi
 		if [ -d /var/cache/ti-c6000-cgt-v8.0.x-installer/ ] ; then
 			rm -rf /var/cache/ti-c6000-cgt-v8.0.x-installer/ || true

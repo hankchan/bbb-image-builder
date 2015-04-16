@@ -240,13 +240,21 @@ generate_soc () {
 		echo "" >> ${wfile}
 		echo "dd_spl_uboot_count=${dd_spl_uboot_count}" >> ${wfile}
 		echo "dd_spl_uboot_seek=${dd_spl_uboot_seek}" >> ${wfile}
-		echo "dd_spl_uboot_conf=${dd_spl_uboot_conf}" >> ${wfile}
+		if [ "x${build_img_file}" = "xenable" ] ; then
+			echo "dd_spl_uboot_conf=notrunc" >> ${wfile}
+		else
+			echo "dd_spl_uboot_conf=${dd_spl_uboot_conf}" >> ${wfile}
+		fi
 		echo "dd_spl_uboot_bs=${dd_spl_uboot_bs}" >> ${wfile}
 		echo "dd_spl_uboot_backup=/opt/backup/uboot/${spl_uboot_name}" >> ${wfile}
 		echo "" >> ${wfile}
 		echo "dd_uboot_count=${dd_uboot_count}" >> ${wfile}
 		echo "dd_uboot_seek=${dd_uboot_seek}" >> ${wfile}
-		echo "dd_uboot_conf=${dd_uboot_conf}" >> ${wfile}
+		if [ "x${build_img_file}" = "xenable" ] ; then
+			echo "dd_uboot_conf=notrunc" >> ${wfile}
+		else
+			echo "dd_uboot_conf=${dd_uboot_conf}" >> ${wfile}
+		fi
 		echo "dd_uboot_bs=${dd_uboot_bs}" >> ${wfile}
 		echo "dd_uboot_backup=/opt/backup/uboot/${uboot_name}" >> ${wfile}
 	else
@@ -306,7 +314,16 @@ unmount_all_drive_partitions () {
 }
 
 sfdisk_partition_layout () {
-	LC_ALL=C sfdisk --force --in-order --Linux --unit M "${media}" <<-__EOF__
+	sfdisk_options="--force --in-order --Linux --unit M"
+	test_sfdisk=$(LC_ALL=C sfdisk --help | grep -m 1 -e "--in-order" || true)
+	if [ "x${test_sfdisk}" = "x" ] ; then
+		echo "log: sfdisk: 2.26.x or greater detected"
+		sfdisk_options="--force"
+		conf_boot_startmb="${conf_boot_startmb}M"
+		conf_boot_endmb="${conf_boot_endmb}M"
+	fi
+
+	LC_ALL=C sfdisk ${sfdisk_options} "${media}" <<-__EOF__
 		${conf_boot_startmb},${conf_boot_endmb},${sfdisk_fstype},*
 		,,,-
 	__EOF__
@@ -315,7 +332,16 @@ sfdisk_partition_layout () {
 }
 
 sfdisk_single_partition_layout () {
-	LC_ALL=C sfdisk --force --in-order --Linux --unit M "${media}" <<-__EOF__
+	sfdisk_options="--force --in-order --Linux --unit M"
+	test_sfdisk=$(LC_ALL=C sfdisk --help | grep -m 1 -e "--in-order" || true)
+	if [ "x${test_sfdisk}" = "x" ] ; then
+		echo "log: sfdisk: 2.26.x or greater detected"
+		sfdisk_options="--force"
+		conf_boot_startmb="${conf_boot_startmb}M"
+	fi
+
+
+	LC_ALL=C sfdisk ${sfdisk_options} "${media}" <<-__EOF__
 		${conf_boot_startmb},,${sfdisk_fstype},*
 	__EOF__
 
@@ -332,8 +358,12 @@ dd_uboot_boot () {
 		dd_uboot="${dd_uboot}seek=${dd_uboot_seek} "
 	fi
 
-	if [ ! "x${dd_uboot_conf}" = "x" ] ; then
-		dd_uboot="${dd_uboot}conv=${dd_uboot_conf} "
+	if [ "x${build_img_file}" = "xenable" ] ; then
+		dd_uboot="${dd_uboot}conv=notrunc "
+	else
+		if [ ! "x${dd_uboot_conf}" = "x" ] ; then
+			dd_uboot="${dd_uboot}conv=${dd_uboot_conf} "
+		fi
 	fi
 
 	if [ ! "x${dd_uboot_bs}" = "x" ] ; then
@@ -356,8 +386,12 @@ dd_spl_uboot_boot () {
 		dd_spl_uboot="${dd_spl_uboot}seek=${dd_spl_uboot_seek} "
 	fi
 
-	if [ ! "x${dd_spl_uboot_conf}" = "x" ] ; then
-		dd_spl_uboot="${dd_spl_uboot}conv=${dd_spl_uboot_conf} "
+	if [ "x${build_img_file}" = "xenable" ] ; then
+			dd_spl_uboot="${dd_spl_uboot}conv=notrunc "
+	else
+		if [ ! "x${dd_spl_uboot_conf}" = "x" ] ; then
+			dd_spl_uboot="${dd_spl_uboot}conv=${dd_spl_uboot_conf} "
+		fi
 	fi
 
 	if [ ! "x${dd_spl_uboot_bs}" = "x" ] ; then
@@ -1051,7 +1085,10 @@ populate_rootfs () {
 		echo "    gateway 192.168.7.1" >> ${wfile}
 
 		if [ ! "x${bborg_production}" = "xenable" ] ; then
+			#wheezy
 			rm -f ${TEMPDIR}/disk/var/www/index.html || true
+			#jessie
+			rm -f ${TEMPDIR}/disk/var/www/html/index.html || true
 		fi
 		sync
 
