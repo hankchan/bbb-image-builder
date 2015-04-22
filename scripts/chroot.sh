@@ -386,7 +386,6 @@ debian)
 		distro="Debian"
 		;;
 	jessie|stretch)
-		sudo cp ${OIB_DIR}/target/init_scripts/systemd-generic-board-startup.service ${tempdir}/lib/systemd/system/generic-board-startup.service
 		sudo cp ${OIB_DIR}/target/init_scripts/systemd-capemgr.service ${tempdir}/lib/systemd/system/capemgr.service
 		sudo cp ${OIB_DIR}/target/init_scripts/capemgr ${tempdir}/etc/default/
 		distro="Debian"
@@ -407,6 +406,13 @@ ubuntu)
 	fi
 	;;
 esac
+
+if [ -d ${tempdir}/usr/share/initramfs-tools/hooks/ ] ; then
+	if [ ! -f ${tempdir}/usr/share/initramfs-tools/hooks/dtbo ] ; then
+		echo "log: adding: [initramfs-tools hook: dtbo]"
+		sudo cp ${OIB_DIR}/target/other/dtbo ${tempdir}/usr/share/initramfs-tools/hooks/
+	fi
+fi
 
 #Backward compatibility, as setup_sdcard.sh expects [lsb_release -si > /etc/rcn-ee.conf]
 echo "distro=${distro}" > /tmp/rcn-ee.conf
@@ -1041,8 +1047,10 @@ fi
 
 #add /boot/uEnv.txt update script
 if [ -d ${tempdir}/etc/kernel/postinst.d/ ] ; then
-	sudo cp -v ${OIB_DIR}/target/other/zz-uenv_txt ${tempdir}/etc/kernel/postinst.d/
-	sudo chmod +x ${tempdir}/etc/kernel/postinst.d/zz-uenv_txt
+	if [ ! -f ${tempdir}/etc/kernel/postinst.d/zz-uenv_txt ] ; then
+		sudo cp -v ${OIB_DIR}/target/other/zz-uenv_txt ${tempdir}/etc/kernel/postinst.d/
+		sudo chmod +x ${tempdir}/etc/kernel/postinst.d/zz-uenv_txt
+	fi
 fi
 
 if [ -f ${tempdir}/usr/bin/qemu-arm-static ] ; then
