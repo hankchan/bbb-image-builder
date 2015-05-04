@@ -1025,7 +1025,7 @@ populate_rootfs () {
 	    echo "" >> ${wfile}
 		echo "allow-hotplug can0" >> ${wfile}
 		echo "iface can0 can static" >> ${wfile}
-		echo "    bitrate 125000" >> ${wfile}
+		echo "    bitrate 250000" >> ${wfile}
                              
         # CANbus for Charger
         echo "" >> ${wfile}

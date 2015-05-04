@@ -376,36 +376,38 @@ sudo mv /tmp/hosts ${tempdir}/etc/hosts
 echo "${rfs_hostname}" > /tmp/hostname
 sudo mv /tmp/hostname ${tempdir}/etc/hostname
 
-case "${deb_distribution}" in
-debian)
-	case "${deb_codename}" in
-	wheezy)
-		sudo cp ${OIB_DIR}/target/init_scripts/generic-${deb_distribution}.sh ${tempdir}/etc/init.d/generic-boot-script.sh
-		sudo cp ${OIB_DIR}/target/init_scripts/capemgr-${deb_distribution}.sh ${tempdir}/etc/init.d/capemgr.sh
-		sudo cp ${OIB_DIR}/target/init_scripts/capemgr ${tempdir}/etc/default/
-		distro="Debian"
+if [ "x${deb_arch}" = "xarmhf" ] ; then
+	case "${deb_distribution}" in
+	debian)
+		case "${deb_codename}" in
+		wheezy)
+			sudo cp ${OIB_DIR}/target/init_scripts/generic-${deb_distribution}.sh ${tempdir}/etc/init.d/generic-boot-script.sh
+			sudo cp ${OIB_DIR}/target/init_scripts/capemgr-${deb_distribution}.sh ${tempdir}/etc/init.d/capemgr.sh
+			sudo cp ${OIB_DIR}/target/init_scripts/capemgr ${tempdir}/etc/default/
+			distro="Debian"
+			;;
+		jessie|stretch)
+			sudo cp ${OIB_DIR}/target/init_scripts/systemd-capemgr.service ${tempdir}/lib/systemd/system/capemgr.service
+			sudo cp ${OIB_DIR}/target/init_scripts/capemgr ${tempdir}/etc/default/
+			distro="Debian"
+			;;
+		esac
 		;;
-	jessie|stretch)
-		sudo cp ${OIB_DIR}/target/init_scripts/systemd-capemgr.service ${tempdir}/lib/systemd/system/capemgr.service
+	ubuntu)
+		sudo cp ${OIB_DIR}/target/init_scripts/generic-${deb_distribution}.conf ${tempdir}/etc/init/generic-boot-script.conf
+		sudo cp ${OIB_DIR}/target/init_scripts/capemgr-${deb_distribution}.sh ${tempdir}/etc/init/capemgr.sh
 		sudo cp ${OIB_DIR}/target/init_scripts/capemgr ${tempdir}/etc/default/
-		distro="Debian"
+		distro="Ubuntu"
+
+		if [ -f ${tempdir}/etc/init/failsafe.conf ] ; then
+			#Ubuntu: with no ethernet cable connected it can take up to 2 mins to login, removing upstart sleep calls..."
+			sudo sed -i -e 's:sleep 20:#sleep 20:g' ${tempdir}/etc/init/failsafe.conf
+			sudo sed -i -e 's:sleep 40:#sleep 40:g' ${tempdir}/etc/init/failsafe.conf
+			sudo sed -i -e 's:sleep 59:#sleep 59:g' ${tempdir}/etc/init/failsafe.conf
+		fi
 		;;
 	esac
-	;;
-ubuntu)
-	sudo cp ${OIB_DIR}/target/init_scripts/generic-${deb_distribution}.conf ${tempdir}/etc/init/generic-boot-script.conf
-	sudo cp ${OIB_DIR}/target/init_scripts/capemgr-${deb_distribution}.sh ${tempdir}/etc/init/capemgr.sh
-	sudo cp ${OIB_DIR}/target/init_scripts/capemgr ${tempdir}/etc/default/
-	distro="Ubuntu"
-
-	if [ -f ${tempdir}/etc/init/failsafe.conf ] ; then
-		#Ubuntu: with no ethernet cable connected it can take up to 2 mins to login, removing upstart sleep calls..."
-		sudo sed -i -e 's:sleep 20:#sleep 20:g' ${tempdir}/etc/init/failsafe.conf
-		sudo sed -i -e 's:sleep 40:#sleep 40:g' ${tempdir}/etc/init/failsafe.conf
-		sudo sed -i -e 's:sleep 59:#sleep 59:g' ${tempdir}/etc/init/failsafe.conf
-	fi
-	;;
-esac
+fi
 
 if [ -d ${tempdir}/usr/share/initramfs-tools/hooks/ ] ; then
 	if [ ! -f ${tempdir}/usr/share/initramfs-tools/hooks/dtbo ] ; then
@@ -940,6 +942,14 @@ chroot_mount
 sudo chroot ${tempdir} /bin/sh -e chroot_script.sh
 echo "Log: Complete: [sudo chroot ${tempdir} /bin/sh -e chroot_script.sh]"
 
+#With the console images, git isn't installed, so we need to patch systemd for shutdown here: (fixed in stretch - udev)
+if [ "x${deb_codename}" = "xwheezy" ] || [ "x${deb_codename}" = "xjessie" ] ; then
+	if [ ! -f ${tempdir}/opt/scripts/mods/jessie-systemd-poweroff.diff ] ; then
+		echo "Log: patching: /lib/udev/rules.d/70-power-switch.rules"
+		sudo cp -v ${DIR}/target/other/systemd-power-switch.rules ${tempdir}/lib/udev/rules.d/70-power-switch.rules
+	fi
+fi
+
 #Do /etc/issue & /etc/issue.net after chroot_script:
 #
 #Unpacking base-files (7.2ubuntu5.1) over (7.2ubuntu5) ...
@@ -1065,15 +1075,6 @@ if [ -d ${tempdir}/etc/ssh/ -a "x${keep_ssh_keys}" = "x" ] ; then
 	#Remove pre-generated ssh keys, these will be regenerated on first bootup...
 	sudo rm -rf ${tempdir}/etc/ssh/ssh_host_* || true
 	sudo touch ${tempdir}/etc/ssh/ssh.regenerate || true
-fi
-
-#extra home, from chroot machine when running npm install xyz:
-unset extra_home
-extra_home=$(ls -lh ${tempdir}/home/ | grep -v ${rfs_username} | awk '{print $9}' | tail -1 || true)
-if [ ! "x${extra_home}" = "x" ] ; then
-	if [ -d ${tempdir}/home/${extra_home}/ ] ; then
-		sudo rm -rf ${tempdir}/home/${extra_home}/ || true
-	fi
 fi
 
 #ID.txt:
