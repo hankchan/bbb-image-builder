@@ -3,12 +3,12 @@
 time=$(date +%Y-%m-%d)
 DIR="$PWD"
 
-./RootStock-NG.sh -c bb.org-debian-wheezy-lxde-2gb
-./RootStock-NG.sh -c bb.org-debian-wheezy-lxde-4gb
+#./RootStock-NG.sh -c bb.org-debian-wheezy-lxde-2gb
+#./RootStock-NG.sh -c bb.org-debian-wheezy-lxde-4gb
 ./RootStock-NG.sh -c bb.org-debian-wheezy-console
 
-debian_lxde_stable="debian-7.8-lxde-armhf-${time}"
-debian_lxde_4gb_stable="debian-7.8-lxde-4gb-armhf-${time}"
+#debian_lxde_stable="debian-7.8-lxde-armhf-${time}"
+#debian_lxde_4gb_stable="debian-7.8-lxde-4gb-armhf-${time}"
 debian_console_stable="debian-7.8-console-armhf-${time}"
 archive="xz -z -8 -v"
 
@@ -53,22 +53,22 @@ compress_img () {
 }
 
 ###Production lxde images: (BBB: 4GB eMMC)
-base_rootfs="${debian_lxde_4gb_stable}"
-pre_generic_img
-
-options="--img-4gb BBB-blank-eMMC-flasher-\${base_rootfs} --dtb bbb-blank-eeprom --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher --hostname beaglebone"
-generic_img
-options="--img-4gb BBB-eMMC-flasher-\${base_rootfs}       --dtb beaglebone       --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc --hostname beaglebone"
-generic_img
-options="--img-4gb bone-\${base_rootfs}                   --dtb beaglebone       --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --bbb-old-bootloader-in-emmc --hostname beaglebone"
-generic_img
+#base_rootfs="${debian_lxde_4gb_stable}"
+#pre_generic_img
+#
+#options="--img-4gb BBB-blank-eMMC-flasher-\${base_rootfs} --dtb bbb-blank-eeprom --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher --hostname beaglebone"
+#generic_img
+#options="--img-4gb BBB-eMMC-flasher-\${base_rootfs}       --dtb beaglebone       --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc --hostname beaglebone"
+#generic_img
+#options="--img-4gb bone-\${base_rootfs}                   --dtb beaglebone       --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --bbb-old-bootloader-in-emmc --hostname beaglebone"
+#generic_img
 
 ###lxde images: (BBB: 2GB eMMC)
-base_rootfs="${debian_lxde_stable}"
-pre_generic_img
-
-options="--img-2gb BBB-eMMC-flasher-\${base_rootfs} --dtb beaglebone --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc --hostname beaglebone"
-generic_img
+#base_rootfs="${debian_lxde_stable}"
+#pre_generic_img
+#
+#options="--img-2gb BBB-eMMC-flasher-\${base_rootfs} --dtb beaglebone --beagleboard.org-production --boot_label BEAGLEBONE --enable-systemd --rootfs_label rootfs --bbb-flasher  --bbb-old-bootloader-in-emmc --hostname beaglebone"
+#generic_img
 
 ###console images: (also single partition)
 base_rootfs="${debian_console_stable}"
@@ -80,25 +80,25 @@ options="--img-2gb bone-\${base_rootfs}             --dtb beaglebone --boot_labe
 generic_img
 
 ###archive *.tar
-base_rootfs="${debian_lxde_4gb_stable}"
-post_generic_img
-
-base_rootfs="${debian_lxde_stable}"
-post_generic_img
+#base_rootfs="${debian_lxde_4gb_stable}"
+#post_generic_img
+#
+#base_rootfs="${debian_lxde_stable}"
+#post_generic_img
 
 base_rootfs="${debian_console_stable}"
 post_generic_img
 
 ###archive *.img
-wfile="BBB-blank-eMMC-flasher-${debian_lxde_4gb_stable}-4gb.img"
-compress_img
-wfile="BBB-eMMC-flasher-${debian_lxde_4gb_stable}-4gb.img"
-compress_img
-wfile="bone-${debian_lxde_4gb_stable}-4gb.img"
-compress_img
-
-wfile="BBB-eMMC-flasher-${debian_lxde_stable}-2gb.img"
-compress_img
+#wfile="BBB-blank-eMMC-flasher-${debian_lxde_4gb_stable}-4gb.img"
+#compress_img
+#wfile="BBB-eMMC-flasher-${debian_lxde_4gb_stable}-4gb.img"
+#compress_img
+#wfile="bone-${debian_lxde_4gb_stable}-4gb.img"
+#compress_img
+#
+#wfile="BBB-eMMC-flasher-${debian_lxde_stable}-2gb.img"
+#compress_img
 
 wfile="BBB-eMMC-flasher-${debian_console_stable}-2gb.img"
 compress_img

@@ -24,6 +24,7 @@ export LC_ALL=C
 
 chromium_release="chromium-33.0.1750.117"
 u_boot_release="v2015.04"
+bone101_git_sha="91468c48e44e1cf684d00b20c505feba1e715be9"
 
 #contains: rfs_username, release_date
 if [ -f /etc/rcn-ee.conf ] ; then
@@ -91,15 +92,13 @@ setup_system () {
 		fi
 	fi
 
-	if [ -f /opt/scripts/boot/am335x_evm.sh ] ; then
-		if [ -f /lib/systemd/system/serial-getty@.service ] ; then
-			cp /lib/systemd/system/serial-getty@.service /etc/systemd/system/serial-getty@ttyGS0.service
-			ln -s /etc/systemd/system/serial-getty@ttyGS0.service /etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service
+	if [ -f /lib/systemd/system/serial-getty@.service ] ; then
+		cp /lib/systemd/system/serial-getty@.service /etc/systemd/system/serial-getty@ttyGS0.service
+		ln -s /etc/systemd/system/serial-getty@ttyGS0.service /etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service
 
-			echo "" >> /etc/securetty
-			echo "#USB Gadget Serial Port" >> /etc/securetty
-			echo "ttyGS0" >> /etc/securetty
-		fi
+		echo "" >> /etc/securetty
+		echo "#USB Gadget Serial Port" >> /etc/securetty
+		echo "ttyGS0" >> /etc/securetty
 	fi
 }
 
@@ -269,11 +268,20 @@ install_node_pkgs () {
 		if [ -f /usr/local/bin/jekyll ] ; then
 			git_repo="https://github.com/beagleboard/bone101"
 			git_target_dir="/var/lib/cloud9"
-			git_clone
+
+			if [ "x${bone101_git_sha}" = "x" ] ; then
+				git_clone
+			else
+				git_clone_full
+			fi
 
 			if [ -f ${git_target_dir}/.git/config ] ; then
 				chown -R ${rfs_username}:${rfs_username} ${git_target_dir}
 				cd ${git_target_dir}/
+
+				if [ ! "x${bone101_git_sha}" = "x" ] ; then
+					git checkout ${bone101_git_sha} -b tmp-production
+				fi
 
 				echo "jekyll pre-building bone101"
 				/usr/local/bin/jekyll build --destination bone101
@@ -382,10 +390,10 @@ install_gem_pkgs () {
 		gem_jessie="--no-document"
 
 		echo "gem: [beaglebone]"
-		gem install beaglebone
+		gem install beaglebone || true
 
 		echo "gem: [jekyll ${gem_wheezy}]"
-		gem install jekyll ${gem_wheezy}
+		gem install jekyll ${gem_wheezy} || true
 	fi
 }
 

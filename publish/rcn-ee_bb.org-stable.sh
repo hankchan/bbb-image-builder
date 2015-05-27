@@ -36,12 +36,15 @@ beaglebone_console="--dtb beaglebone --boot_label BEAGLEBONE \
 bb_blank_flasher_console="--dtb bbb-blank-eeprom --boot_label BEAGLEBONE \
 --bbb-old-bootloader-in-emmc --hostname beaglebone"
 
+arduino_tre="--dtb am335x-arduino-tre --beagleboard.org-production --boot_label ARDUINO-TRE \
+--rootfs_label rootfs --hostname arduino-tre"
+
 omap3_beagle_xm="--dtb omap3-beagle-xm --hostname BeagleBoard"
 omap5_uevm="--dtb omap5-uevm --hostname omap5-uevm"
 am57xx_beagle_x15="--dtb am57xx-beagle-x15 --hostname BeagleBoard-X15"
 
 cat > ${DIR}/deploy/gift_wrap_final_images.sh <<-__EOF__
-#!/bin/bash -x
+#!/bin/bash
 
 copy_base_rootfs_to_mirror () {
         if [ -d ${mirror_dir} ] ; then
@@ -119,6 +122,7 @@ options="--img-4gb bb-\${base_rootfs} ${omap3_beagle_xm}" ; generate_img
 options="--img-4gb bbx15-\${base_rootfs} ${am57xx_beagle_x15}" ; generate_img
 options="--img-4gb bone-\${base_rootfs} ${beaglebone}" ; generate_img
 options="--img-4gb omap5-uevm-\${base_rootfs} ${omap5_uevm}" ; generate_img
+options="--img-4gb tre-\${base_rootfs} ${arduino_tre}" ; generate_img
 
 ###lxqt-2gb image
 base_rootfs="${debian_jessie_lxqt_2gb}" ; blend="lxqt-2gb" ; extract_base_rootfs
@@ -152,6 +156,7 @@ wfile="bb-${debian_jessie_lxqt_4gb}-4gb.img" ; archive_img
 wfile="bbx15-${debian_jessie_lxqt_4gb}-4gb.img" ; archive_img
 wfile="bone-${debian_jessie_lxqt_4gb}-4gb.img" ; archive_img
 wfile="omap5-uevm-${debian_jessie_lxqt_4gb}-4gb.img" ; archive_img
+wfile="tre-${debian_jessie_lxqt_4gb}-4gb.img" ; archive_img
 
 blend="lxqt-2gb"
 wfile="BBB-eMMC-flasher-${debian_jessie_lxqt_2gb}-2gb.img" ; archive_img
@@ -175,8 +180,9 @@ if [ ! -d /mnt/farm/images/ ] ; then
 fi
 
 if [ -d /mnt/farm/images/ ] ; then
-	cp -v ${DIR}/deploy/*.tar /mnt/farm/images/
-	cp -v ${DIR}/deploy/gift_wrap_final_images.sh /mnt/farm/images/gift_wrap_final_images.sh
-	chmod +x /mnt/farm/images/gift_wrap_final_images.sh
+	mkdir /mnt/farm/images/${time}/
+	cp -v ${DIR}/deploy/*.tar /mnt/farm/images/${time}/
+	cp -v ${DIR}/deploy/gift_wrap_final_images.sh /mnt/farm/images/${time}/gift_wrap_final_images.sh
+	chmod +x /mnt/farm/images/${time}/gift_wrap_final_images.sh
 fi
 
