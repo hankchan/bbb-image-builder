@@ -64,11 +64,11 @@ Master branch:
 
 eewiki.net: Debian Stable (armel) minfs:
 
-    ./RootStock-NG.sh -c eewiki_minfs_debian_wheezy_armel
+    ./RootStock-NG.sh -c eewiki_minfs_debian_jessie_armel
 
 eewiki.net: Debian Stable (armhf) minfs:
 
-    ./RootStock-NG.sh -c eewiki_minfs_debian_wheezy_armhf
+    ./RootStock-NG.sh -c eewiki_minfs_debian_jessie_armhf
 
 eewiki.net: Ubuntu Stable (armhf) minfs:
 
@@ -76,16 +76,16 @@ eewiki.net: Ubuntu Stable (armhf) minfs:
 
 eewiki.net: Debian Stable (armel) barefs:
 
-    ./RootStock-NG.sh -c eewiki_bare_debian_wheezy_armel
+    ./RootStock-NG.sh -c eewiki_bare_debian_jessie_armel
 
 eewiki.net: Debian Stable (armhf) barefs:
 
-    ./RootStock-NG.sh -c eewiki_bare_debian_wheezy_armhf
+    ./RootStock-NG.sh -c eewiki_bare_debian_jessie_armhf
 
 elinux.org: Debian Images:
 
-    ./RootStock-NG.sh -c rcn-ee_console_debian_wheezy_armhf
     ./RootStock-NG.sh -c rcn-ee_console_debian_jessie_armhf
+    ./RootStock-NG.sh -c rcn-ee_console_debian_stretch_armhf
     http://elinux.org/BeagleBoardDebian#Demo_Image
 
 elinux.org: Ubuntu Images:

@@ -22,9 +22,8 @@
 
 export LC_ALL=C
 
-chromium_release="chromium-33.0.1750.117"
-u_boot_release="v2015.04"
-bone101_git_sha="91468c48e44e1cf684d00b20c505feba1e715be9"
+u_boot_release="v2015.07-rc3"
+bone101_git_sha="94de2fa47aa833b854c708a81b3129e540ccabbb"
 
 #contains: rfs_username, release_date
 if [ -f /etc/rcn-ee.conf ] ; then
@@ -448,17 +447,6 @@ install_git_repos () {
 
 install_build_pkgs () {
 	cd /opt/
-	if [ -f /usr/bin/xz ] ; then
-		wget https://rcn-ee.com/pkgs/chromium/${chromium_release}-armhf.tar.xz
-		if [ -f /opt/${chromium_release}-armhf.tar.xz ] ; then
-			tar xf ${chromium_release}-armhf.tar.xz -C /
-			rm -rf ${chromium_release}-armhf.tar.xz || true
-			echo "${chromium_release} : https://rcn-ee.com/pkgs/chromium/${chromium_release}.tar.xz" >> /opt/source/list.txt
-
-			#link Chromium to /usr/bin/x-www-browser
-			update-alternatives --install /usr/bin/x-www-browser x-www-browser /usr/bin/chromium 200
-		fi
-	fi
 }
 
 other_source_links () {
@@ -470,6 +458,8 @@ other_source_links () {
 	wget --directory-prefix="/opt/source/u-boot_${u_boot_release}/" ${rcn_https}/${u_boot_release}/0001-beagle_x15-uEnv.txt-bootz-n-fixes.patch
 
 	echo "u-boot_${u_boot_release} : /opt/source/u-boot_${u_boot_release}" >> /opt/source/list.txt
+
+	chown -R ${rfs_username}:${rfs_username} /opt/source/
 }
 
 unsecure_root () {

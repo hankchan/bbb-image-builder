@@ -23,8 +23,8 @@
 export LC_ALL=C
 
 chromium_release="chromium-33.0.1750.117"
-u_boot_release="v2015.04"
-bone101_git_sha="91468c48e44e1cf684d00b20c505feba1e715be9"
+u_boot_release="v2015.07-rc3"
+bone101_git_sha="94de2fa47aa833b854c708a81b3129e540ccabbb"
 
 #contains: rfs_username, release_date
 if [ -f /etc/rcn-ee.conf ] ; then
@@ -480,6 +480,8 @@ other_source_links () {
 	wget --directory-prefix="/opt/source/u-boot_${u_boot_release}/" ${rcn_https}/${u_boot_release}/0001-beagle_x15-uEnv.txt-bootz-n-fixes.patch
 
 	echo "u-boot_${u_boot_release} : /opt/source/u-boot_${u_boot_release}" >> /opt/source/list.txt
+
+	chown -R ${rfs_username}:${rfs_username} /opt/source/
 }
 
 unsecure_root () {
@@ -513,14 +515,80 @@ todo () {
 	fi
 }
 
+install_hsbms () {
+	
+	#echo "HS: systemctl enable multi-user.target"
+	#systemctl enable multi-user.target
+	
+	echo "HS: Timezone"
+	echo "Asia/Harbin" > /etc/timezone 
+    dpkg-reconfigure -f noninteractive tzdata
+
+	# Get latest HyperStrong EV Application to /root/hyperstrong
+	echo "HS: Installing HyperStrong apps(capture gps remote etc)"
+	git_repo="https://github.com/hankchan/bbb_hs_ev_app.git"
+	git_target_dir="/root/hyperstrong/"
+	git_clone
+	if [ -d /root/hyperstrong ] ; then
+	    chmod a+x /root/hyperstrong/hs_bbb_*
+	    cp /root/hyperstrong/config/HS-CAN-00A0.dtbo /lib/firmware
+        cp /root/hyperstrong/config/hs_bbb.conf /etc/supervisor/conf.d
+	fi
+	
+    echo "HS: Loading custom capes"
+    if [ -f /etc/default/capemgr ] ; then
+            sed -i -e 's:CAPE=:CAPE=HS-CAN:g' /etc/default/capemgr
+	fi	
+
+	## crontab ntpdate 
+	#echo "HS: Add crontab task"
+	#echo "*/10 * * * * ntpdate -u 1.cn.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org" | crontab -
+
+	# ppp
+	echo "HS: Configure ppp"
+	if [ -f /etc/ppp/peers/provider ] ; then
+		sed -i -e 's:/dev/modem:/dev/ttyO5:g' /etc/ppp/peers/provider
+		sed -i -e 's:\*\*\*\*\*\*\*\*:\*99\*\*\*1#:g' /etc/ppp/peers/provider
+	fi
+	if [ -f /etc/chatscripts/pap ] ; then
+		sed -i -e '/ATZ/aOK              AT+CGPSPWR=1' /etc/chatscripts/pap
+		sed -i -e '/CGPSPWR/aOK              AT+CGPSRST=1' /etc/chatscripts/pap
+		sed -i -e '/CGPSRST/aOK              AT+CGPSIPR=115200' /etc/chatscripts/pap
+        sed -i -e '/CGPSIPR/aOK              AT+CGPSOUT=35' /etc/chatscripts/pap
+        sed -i -e '/CGPSIPR/aOK              AT+CGDCONT=1,"IP","3gnet",,0,0' /etc/chatscripts/pap
+	fi
+
+	# /etc/rc/local
+	echo "HS: Configure /etc/rc.local"
+	if [ -f /etc/rc.local ] ; then
+		#sed -i -e '$iip link set can0 type can bitrate 125000' /etc/rc.local
+		#sed -i -e '$iip link set can1 type can bitrate 125000' /etc/rc.local
+		#sed -i -e '$iip link set can2 type can bitrate 125000' /etc/rc.local
+		#sed -i -e '$iip link set can0 up' /etc/rc.local
+		#sed -i -e '$iip link set can1 up' /etc/rc.local
+		#sed -i -e '$iip link set can2 up' /etc/rc.local
+		sed -i -e '$ipon' /etc/rc.local
+		sed -i -e '$i/usr/bin/autossh -M0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 3" -p 22 root@114.215.139.157  -R 0:localhost:22  -C -N -f -g' /etc/rc.local
+	fi	
+	
+	# ssh port forwading
+	echo "HS: Configure SSH port forwading"
+	ssh-keygen -t rsa
+	if [ -f /root/.ssh/id_rsa ] ; then
+	    ssh-copy-id -i /root/.ssh/id_rsa.pub  root@114.215.139.157
+	fi
+}
+
 is_this_qemu
 
 setup_system
 setup_desktop
 
-install_gem_pkgs
-install_node_pkgs
-install_pip_pkgs
+install_hsbms
+
+#install_node_pkgs
+#install_pip_pkgs
+#install_gem_pkgs
 if [ -f /usr/bin/git ] ; then
 	install_git_repos
 fi

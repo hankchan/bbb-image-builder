@@ -315,20 +315,24 @@ unmount_all_drive_partitions () {
 
 sfdisk_partition_layout () {
 	sfdisk_options="--force --in-order --Linux --unit M"
+	sfdisk_boot_startmb="${conf_boot_startmb}"
+	sfdisk_boot_endmb="${conf_boot_endmb}"
+	sfdisk_var_startmb="${conf_var_startmb}"
+
 	test_sfdisk=$(LC_ALL=C sfdisk --help | grep -m 1 -e "--in-order" || true)
 	if [ "x${test_sfdisk}" = "x" ] ; then
 		echo "log: sfdisk: 2.26.x or greater detected"
 		sfdisk_options="--force"
-		conf_boot_startmb="${conf_boot_startmb}M"
-		conf_boot_endmb="${conf_boot_endmb}M"
-		conf_var_startmb="${conf_var_startmb}M"
+		sfdisk_boot_startmb="${sfdisk_boot_startmb}M"
+		sfdisk_boot_endmb="${sfdisk_boot_endmb}M"
+		sfdisk_var_startmb="${sfdisk_var_startmb}M"
 	fi
 
 	if [ "x${option_ro_root}" = "xenable" ] ; then
 
 		LC_ALL=C sfdisk ${sfdisk_options} "${media}" <<-__EOF__
-			${conf_boot_startmb},${conf_boot_endmb},${sfdisk_fstype},*
-			,${conf_var_startmb},,-
+			${sfdisk_boot_startmb},${sfdisk_boot_endmb},${sfdisk_fstype},*
+			,${sfdisk_var_startmb},,-
 			,,,-
 		__EOF__
 
@@ -336,7 +340,7 @@ sfdisk_partition_layout () {
 	else
 
 		LC_ALL=C sfdisk ${sfdisk_options} "${media}" <<-__EOF__
-			${conf_boot_startmb},${conf_boot_endmb},${sfdisk_fstype},*
+			${sfdisk_boot_startmb},${sfdisk_boot_endmb},${sfdisk_fstype},*
 			,,,-
 		__EOF__
 
@@ -347,18 +351,21 @@ sfdisk_partition_layout () {
 
 sfdisk_single_partition_layout () {
 	sfdisk_options="--force --in-order --Linux --unit M"
+	sfdisk_boot_startmb="${conf_boot_startmb}"
+	sfdisk_var_startmb="${conf_var_startmb}"
+
 	test_sfdisk=$(LC_ALL=C sfdisk --help | grep -m 1 -e "--in-order" || true)
 	if [ "x${test_sfdisk}" = "x" ] ; then
 		echo "log: sfdisk: 2.26.x or greater detected"
 		sfdisk_options="--force"
-		conf_boot_startmb="${conf_boot_startmb}M"
-		conf_var_startmb="${conf_var_startmb}M"
+		sfdisk_boot_startmb="${sfdisk_boot_startmb}M"
+		sfdisk_var_startmb="${sfdisk_var_startmb}M"
 	fi
 
 	if [ "x${option_ro_root}" = "xenable" ] ; then
 
 		LC_ALL=C sfdisk ${sfdisk_options} "${media}" <<-__EOF__
-			${conf_boot_startmb},${conf_var_startmb},${sfdisk_fstype},*
+			${sfdisk_boot_startmb},${sfdisk_var_startmb},${sfdisk_fstype},*
 			,,,-
 		__EOF__
 
@@ -366,7 +373,7 @@ sfdisk_single_partition_layout () {
 	else
 
 		LC_ALL=C sfdisk ${sfdisk_options} "${media}" <<-__EOF__
-			${conf_boot_startmb},,${sfdisk_fstype},*
+			${sfdisk_boot_startmb},,${sfdisk_fstype},*
 		__EOF__
 
 	fi
@@ -996,15 +1003,38 @@ populate_rootfs () {
 		echo "uname_r=${kernel_override}" >> ${wfile}
 	fi
 
+	if [ ! "x${rootfs_uuid}" = "x" ] ; then
+		echo "uuid=${rootfs_uuid}" >> ${wfile}
+		echo "" >> ${wfile}
+	fi
+
 	if [ ! "x${dtb}" = "x" ] ; then
 		echo "dtb=${dtb}" >> ${wfile}
 	else
 		echo "#dtb=" >> ${wfile}
-	fi
 
-	if [ ! "x${rootfs_uuid}" = "x" ] ; then
-		echo "uuid=${rootfs_uuid}" >> ${wfile}
-		echo "" >> ${wfile}
+		if [ "x${conf_board}" = "xam335x_boneblack" ] || [ "x${conf_board}" = "xam335x_evm" ] ; then
+			echo "" >> ${wfile}
+			echo "##BeagleBone Black dtb's for v4.1.x (BeagleBone White just works..)" >> ${wfile}
+
+			echo "" >> ${wfile}
+			echo "##HDMI/eMMC disabled:" >> ${wfile}
+			echo "#dtb=am335x-boneblack-overlay.dtb" >> ${wfile}
+
+			echo "" >> ${wfile}
+			echo "##cape-universal" >> ${wfile}
+			echo "#dtb=am335x-boneblack-universal.dtb" >> ${wfile}
+
+			echo "" >> ${wfile}
+			echo "##wl1835" >> ${wfile}
+			echo "#dtb=am335x-boneblack-wl1835mod.dtb" >> ${wfile}
+
+			echo "" >> ${wfile}
+			echo "##replicape" >> ${wfile}
+			echo "#dtb=am335x-boneblack-replicape.dtb" >> ${wfile}
+
+			echo "" >> ${wfile}
+		fi
 	fi
 
 	cmdline="coherent_pool=1M quiet"
@@ -1030,9 +1060,14 @@ populate_rootfs () {
 	fi
 
 	if [ "x${conf_board}" = "xam335x_boneblack" ] || [ "x${conf_board}" = "xam335x_evm" ] ; then
-		echo "##Example" >> ${wfile}
+		echo "##Example v3.8.x" >> ${wfile}
 		echo "#cape_disable=capemgr.disable_partno=" >> ${wfile}
 		echo "#cape_enable=capemgr.enable_partno=" >> ${wfile}
+		echo "" >> ${wfile}
+
+		echo "##Example v4.1.x" >> ${wfile}
+		echo "#cape_disable=bone_capemgr.disable_partno=" >> ${wfile}
+		echo "#cape_enable=bone_capemgr.enable_partno=" >> ${wfile}
 		echo "" >> ${wfile}
 
 		if [ ! "x${has_post_uenvtxt}" = "x" ] ; then
@@ -1183,11 +1218,10 @@ populate_rootfs () {
 		echo "" >> ${wfile}
 
 		echo "# Ethernet/RNDIS gadget (g_ether)" >> ${wfile}
-		echo "# ... or on host side, usbnet and random hwaddr" >> ${wfile}
-		echo "# Note on some boards, usb0 is automaticly setup with an init script" >> ${wfile}
+		echo "# Used by: /opt/scripts/boot/autoconfigure_usb0.sh" >> ${wfile}
 		echo "iface usb0 inet static" >> ${wfile}
 		echo "    address 192.168.7.2" >> ${wfile}
-		echo "    netmask 255.255.255.0" >> ${wfile}
+		echo "    netmask 255.255.255.252" >> ${wfile}
 		echo "    network 192.168.7.0" >> ${wfile}
 		echo "    gateway 192.168.7.1" >> ${wfile}
 
@@ -1234,25 +1268,9 @@ populate_rootfs () {
 		echo "" >> ${TEMPDIR}/disk${file}
 	fi
 
-	if [ -f ${TEMPDIR}/disk/etc/dnsmasq.conf ] ; then
-		if [ ! -f ${TEMPDIR}/etc/dnsmasq.d/usb0-dhcp ] ; then
-			wfile="/etc/dnsmasq.d/usb0-dhcp"
-			echo "#disable DNS by setting port to 0" > ${TEMPDIR}/disk${wfile}
-			echo "port=0" >> ${TEMPDIR}/disk${wfile}
-			echo "" >> ${TEMPDIR}/disk${wfile}
-			echo "interface=usb0" >> ${TEMPDIR}/disk${wfile}
-			echo "#one address range" >> ${TEMPDIR}/disk${wfile}
-			echo "dhcp-range=192.168.7.1,192.168.7.1" >> ${TEMPDIR}/disk${wfile}
-			echo "" >> ${TEMPDIR}/disk${wfile}
-			echo "dhcp-option=3" >> ${TEMPDIR}/disk${wfile}
-			echo "except-interface=lo" >> ${TEMPDIR}/disk${wfile}
-			echo "listen-address=192.168.7.2" >> ${TEMPDIR}/disk${wfile}
-			echo "bind-interfaces" >> ${TEMPDIR}/disk${wfile}
-		fi
-	fi
-
 	if [ ! -f ${TEMPDIR}/disk/opt/scripts/boot/generic-startup.sh ] ; then
 		git clone https://github.com/RobertCNelson/boot-scripts ${TEMPDIR}/disk/opt/scripts/ --depth 1
+		sudo chown -R 1000:1000 ${TEMPDIR}/disk/opt/scripts/
 	fi
 
 	if [ "x${drm}" = "xomapdrm" ] ; then

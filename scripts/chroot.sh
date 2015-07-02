@@ -342,14 +342,14 @@ fi
 if [ "x${repo_rcnee}" = "xenable" ] ; then
 	#no: precise
 	echo "" >> ${wfile}
-	echo "#Kernel source (repos.rcn-ee.net) : https://github.com/RobertCNelson/linux-stable-rcn-ee" >> ${wfile}
+	echo "#Kernel source (repos.rcn-ee.com) : https://github.com/RobertCNelson/linux-stable-rcn-ee" >> ${wfile}
 	echo "#" >> ${wfile}
 	echo "#git clone https://github.com/RobertCNelson/linux-stable-rcn-ee" >> ${wfile}
 	echo "#cd ./linux-stable-rcn-ee" >> ${wfile}
 	echo "#git checkout \`uname -r\` -b tmp" >> ${wfile}
 	echo "#" >> ${wfile}
-	echo "deb [arch=armhf] http://repos.rcn-ee.net/${deb_distribution}/ ${deb_codename} main" >> ${wfile}
-	echo "#deb-src [arch=armhf] http://repos.rcn-ee.net/${deb_distribution}/ ${deb_codename} main" >> ${wfile}
+	echo "deb [arch=armhf] http://repos.rcn-ee.com/${deb_distribution}/ ${deb_codename} main" >> ${wfile}
+	echo "#deb-src [arch=armhf] http://repos.rcn-ee.com/${deb_distribution}/ ${deb_codename} main" >> ${wfile}
 
 	sudo cp -v ${OIB_DIR}/target/keyring/repos.rcn-ee.net-archive-keyring.asc ${tempdir}/tmp/repos.rcn-ee.net-archive-keyring.asc
 fi
@@ -1124,10 +1124,25 @@ fi
 
 sudo chown -R ${USER}:${USER} ${DIR}/deploy/${export_filename}/
 
+keep_alive () {
+	while : ; do
+		sleep 15
+		echo "Log: [x---]: Creating: ${export_filename}.tar"
+		sleep 15
+		echo "Log: [-x--]: Creating: ${export_filename}.tar"
+		sleep 15
+		echo "Log: [--x-]: Creating: ${export_filename}.tar"
+		sleep 15
+		echo "Log: [---x]: Creating: ${export_filename}.tar"
+	done
+}
+
 if [ "x${chroot_tarball}" = "xenable" ] ; then
-	echo "Compressing ${export_filename}"
+	echo "Creating: ${export_filename}.tar"
 	cd ${DIR}/deploy/
+	keep_alive & KEEP_ALIVE_PID=$!
 	tar cvf ${export_filename}.tar ./${export_filename}
+	[ -e /proc/$KEEP_ALIVE_PID ] && sudo kill $KEEP_ALIVE_PID
 	cd ${DIR}/
 fi
 #

@@ -22,9 +22,8 @@
 
 export LC_ALL=C
 
-chromium_release="chromium-33.0.1750.117"
-u_boot_release="v2015.04"
-bone101_git_sha="91468c48e44e1cf684d00b20c505feba1e715be9"
+u_boot_release="v2015.07-rc3"
+bone101_git_sha="94de2fa47aa833b854c708a81b3129e540ccabbb"
 
 #contains: rfs_username, release_date
 if [ -f /etc/rcn-ee.conf ] ; then
@@ -116,6 +115,8 @@ setup_desktop () {
 #		echo "        Driver          \"modesetting\"" >> ${wfile}
 		echo "        Driver          \"fbdev\"" >> ${wfile}
 
+		echo "#HWcursor_false        Option          \"HWcursor\"          \"false\"" >> ${wfile}
+
 		echo "EndSection" >> ${wfile}
 		echo "" >> ${wfile}
 		echo "Section \"Screen\"" >> ${wfile}
@@ -136,19 +137,16 @@ setup_desktop () {
 		echo "Patching: ${wfile}"
 		sed -i -e 's:#autologin-user=:autologin-user='$rfs_username':g' ${wfile}
 		sed -i -e 's:#autologin-session=UNIMPLEMENTED:autologin-session='$rfs_default_desktop':g' ${wfile}
-		if [ -f /opt/scripts/3rdparty/xinput_calibrator_pointercal.sh ] ; then
-			sed -i -e 's:#display-setup-script=:display-setup-script=/opt/scripts/3rdparty/xinput_calibrator_pointercal.sh:g' ${wfile}
-		fi
+#		if [ -f /opt/scripts/3rdparty/xinput_calibrator_pointercal.sh ] ; then
+#			sed -i -e 's:#display-setup-script=:display-setup-script=/opt/scripts/3rdparty/xinput_calibrator_pointercal.sh:g' ${wfile}
+#		fi
 	fi
 
 	if [ ! "x${rfs_desktop_background}" = "x" ] ; then
-		cp -v "${rfs_desktop_background}" /opt/desktop-background.jpg
-
-		mkdir -p /home/${rfs_username}/.config/pcmanfm/LXDE/ || true
-		wfile="/home/${rfs_username}/.config/pcmanfm/LXDE/pcmanfm.conf"
-		echo "[desktop]" > ${wfile}
-		echo "wallpaper_mode=1" >> ${wfile}
-		echo "wallpaper=/opt/desktop-background.jpg" >> ${wfile}
+		mkdir -p /home/${rfs_username}/.config/ || true
+		if [ -d /opt/scripts/desktop-defaults/jessie/lxqt/ ] ; then
+			cp -rv /opt/scripts/desktop-defaults/jessie/lxqt/* /home/${rfs_username}/.config
+		fi
 		chown -R ${rfs_username}:${rfs_username} /home/${rfs_username}/.config/
 	fi
 
@@ -162,27 +160,27 @@ setup_desktop () {
 	echo "xsetroot -cursor_name left_ptr" >> ${wfile}
 	chown -R ${rfs_username}:${rfs_username} ${wfile}
 
-	#Disable LXDE's screensaver on autostart
-	if [ -f /etc/xdg/lxsession/LXDE/autostart ] ; then
-		cat /etc/xdg/lxsession/LXDE/autostart | grep -v xscreensaver > /tmp/autostart
-		mv /tmp/autostart /etc/xdg/lxsession/LXDE/autostart
-		rm -rf /tmp/autostart || true
-	fi
+#	#Disable LXDE's screensaver on autostart
+#	if [ -f /etc/xdg/lxsession/LXDE/autostart ] ; then
+#		cat /etc/xdg/lxsession/LXDE/autostart | grep -v xscreensaver > /tmp/autostart
+#		mv /tmp/autostart /etc/xdg/lxsession/LXDE/autostart
+#		rm -rf /tmp/autostart || true
+#	fi
 
 	#echo "CAPE=cape-bone-proto" >> /etc/default/capemgr
 
-	#root password is blank, so remove useless application as it requires a password.
-	if [ -f /usr/share/applications/gksu.desktop ] ; then
-		rm -f /usr/share/applications/gksu.desktop || true
-	fi
+#	#root password is blank, so remove useless application as it requires a password.
+#	if [ -f /usr/share/applications/gksu.desktop ] ; then
+#		rm -f /usr/share/applications/gksu.desktop || true
+#	fi
 
-	#lxterminal doesnt reference .profile by default, so call via loginshell and start bash
-	if [ -f /usr/bin/lxterminal ] ; then
-		if [ -f /usr/share/applications/lxterminal.desktop ] ; then
-			sed -i -e 's:Exec=lxterminal:Exec=lxterminal -l -e bash:g' /usr/share/applications/lxterminal.desktop
-			sed -i -e 's:TryExec=lxterminal -l -e bash:TryExec=lxterminal:g' /usr/share/applications/lxterminal.desktop
-		fi
-	fi
+#	#lxterminal doesnt reference .profile by default, so call via loginshell and start bash
+#	if [ -f /usr/bin/lxterminal ] ; then
+#		if [ -f /usr/share/applications/lxterminal.desktop ] ; then
+#			sed -i -e 's:Exec=lxterminal:Exec=lxterminal -l -e bash:g' /usr/share/applications/lxterminal.desktop
+#			sed -i -e 's:TryExec=lxterminal -l -e bash:TryExec=lxterminal:g' /usr/share/applications/lxterminal.desktop
+#		fi
+#	fi
 
 	#ti: firewall blocks pastebin.com
 	if [ -f /usr/bin/pastebinit ] ; then
@@ -193,6 +191,12 @@ setup_desktop () {
 		echo "    <jabberid>author@example.net</jabberid>" >> ${wfile}
 		echo "    <format>text</format>" >> ${wfile}
 		echo "</pastebinit>" >> ${wfile}
+	fi
+
+	#fix Ping:
+	#ping: icmp open socket: Operation not permitted
+	if [ -f /bin/ping ] ; then
+		chmod u+x /bin/ping
 	fi
 }
 
@@ -344,8 +348,8 @@ install_node_pkgs () {
 				if [ -f /etc/apache2/sites-enabled/000-default ] ; then
 					sed -i -e 's:80:8080:g' /etc/apache2/sites-enabled/000-default
 				fi
-				if [ -f /var/www/index.html ] ; then
-					rm -rf /var/www/index.html || true
+				if [ -f /var/www/html/index.html ] ; then
+					rm -rf /var/www/html/index.html || true
 				fi
 			fi
 		fi
@@ -355,30 +359,17 @@ install_node_pkgs () {
 install_pip_pkgs () {
 	if [ -f /usr/bin/pip ] ; then
 		echo "Installing pip packages"
+		#Fixed in git, however not pushed to pip yet...(use git and install)
+		#libpython2.7-dev
+		#pip install Adafruit_BBIO
 
-		#debian@beaglebone:~$ pip install Adafruit_BBIO
-		#Downloading/unpacking Adafruit-BBIO
-		#  Downloading Adafruit_BBIO-0.0.19.tar.gz
-		#  Running setup.py egg_info for package Adafruit-BBIO
-		#    The required version of distribute (>=0.6.45) is not available,
-		#    and can't be installed while this script is running. Please
-		#    install a more recent version first, using
-		#    'easy_install -U distribute'.
-		#
-		#    (Currently using distribute 0.6.24dev-r0 (/usr/lib/python2.7/dist-packages))
-		#    Complete output from command python setup.py egg_info:
-		#    The required version of distribute (>=0.6.45) is not available,
-		#
-		#and can't be installed while this script is running. Please
-		#
-		#install a more recent version first, using
-		#
-		#'easy_install -U distribute'.
-		#
-		#(Currently using distribute 0.6.24dev-r0 (/usr/lib/python2.7/dist-packages))
-
-		easy_install -U distribute
-		pip install Adafruit_BBIO
+		git_repo="https://github.com/adafruit/adafruit-beaglebone-io-python.git"
+		git_target_dir="/opt/source/adafruit-beaglebone-io-python"
+		git_clone
+		if [ -f ${git_target_dir}/.git/config ] ; then
+			cd ${git_target_dir}/
+			python setup.py install
+		fi
 	fi
 }
 
@@ -392,8 +383,8 @@ install_gem_pkgs () {
 		echo "gem: [beaglebone]"
 		gem install beaglebone || true
 
-		echo "gem: [jekyll ${gem_wheezy}]"
-		gem install jekyll ${gem_wheezy} || true
+		echo "gem: [jekyll ${gem_jessie}]"
+		gem install jekyll ${gem_jessie} || true
 	fi
 }
 
@@ -451,6 +442,41 @@ install_git_repos () {
 	git_target_dir="/opt/source/dtb-${git_branch}"
 	git_clone_branch
 
+	git_repo="https://github.com/RobertCNelson/dtb-rebuilder.git"
+	git_branch="4.1.x"
+	git_target_dir="/opt/source/dtb-${git_branch}"
+	git_clone_branch
+
+	git_repo="https://github.com/beagleboard/bb.org-overlays"
+	git_target_dir="/opt/source/bb.org-overlays"
+	git_clone
+	if [ -f ${git_target_dir}/.git/config ] ; then
+		cd ${git_target_dir}/
+		if [ ! "x${repo_rcnee_pkg_version}" = "x" ] ; then
+			is_kernel=$(echo ${repo_rcnee_pkg_version} | grep 4.1)
+			if [ ! "x${is_kernel}" = "x" ] ; then
+				if [ -f /usr/bin/make ] ; then
+					./dtc-overlay.sh
+					make
+					make install
+					update-initramfs -u -k ${repo_rcnee_pkg_version}
+				fi
+			fi
+		fi
+	fi
+
+	git_repo="https://github.com/ungureanuvladvictor/BBBlfs"
+	git_target_dir="/opt/source/BBBlfs"
+	git_clone
+	if [ -f ${git_target_dir}/.git/config ] ; then
+		cd ${git_target_dir}/
+		if [ -f /usr/bin/make ] ; then
+			./autogen.sh
+			./configure
+			make
+		fi
+	fi
+
 	git_repo="git://git.ti.com/pru-software-support-package/pru-software-support-package.git"
 	git_target_dir="/opt/source/pru-software-support-package"
 	git_clone
@@ -458,17 +484,6 @@ install_git_repos () {
 
 install_build_pkgs () {
 	cd /opt/
-	if [ -f /usr/bin/xz ] ; then
-		wget https://rcn-ee.com/pkgs/chromium/${chromium_release}-armhf.tar.xz
-		if [ -f /opt/${chromium_release}-armhf.tar.xz ] ; then
-			tar xf ${chromium_release}-armhf.tar.xz -C /
-			rm -rf ${chromium_release}-armhf.tar.xz || true
-			echo "${chromium_release} : https://rcn-ee.com/pkgs/chromium/${chromium_release}.tar.xz" >> /opt/source/list.txt
-
-			#link Chromium to /usr/bin/x-www-browser
-			update-alternatives --install /usr/bin/x-www-browser x-www-browser /usr/bin/chromium 200
-		fi
-	fi
 }
 
 other_source_links () {
@@ -480,6 +495,8 @@ other_source_links () {
 	wget --directory-prefix="/opt/source/u-boot_${u_boot_release}/" ${rcn_https}/${u_boot_release}/0001-beagle_x15-uEnv.txt-bootz-n-fixes.patch
 
 	echo "u-boot_${u_boot_release} : /opt/source/u-boot_${u_boot_release}" >> /opt/source/list.txt
+
+	chown -R ${rfs_username}:${rfs_username} /opt/source/
 }
 
 unsecure_root () {
@@ -490,6 +507,8 @@ unsecure_root () {
 		#Make ssh root@beaglebone work..
 		sed -i -e 's:PermitEmptyPasswords no:PermitEmptyPasswords yes:g' /etc/ssh/sshd_config
 		sed -i -e 's:UsePAM yes:UsePAM no:g' /etc/ssh/sshd_config
+		#Starting with Jessie:
+		sed -i -e 's:PermitRootLogin without-password:PermitRootLogin yes:g' /etc/ssh/sshd_config
 	fi
 
 	if [ -f /etc/sudoers ] ; then
@@ -522,9 +541,13 @@ install_gem_pkgs
 install_node_pkgs
 install_pip_pkgs
 if [ -f /usr/bin/git ] ; then
+	git config --global user.email "${rfs_username}@example.com"
+	git config --global user.name "${rfs_username}"
 	install_git_repos
+	git config --global --unset-all user.email
+	git config --global --unset-all user.name
 fi
-install_build_pkgs
+#install_build_pkgs
 other_source_links
 unsecure_root
 todo
