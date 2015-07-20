@@ -23,8 +23,8 @@
 export LC_ALL=C
 
 chromium_release="chromium-33.0.1750.117"
-u_boot_release="v2015.07-rc3"
-bone101_git_sha="94de2fa47aa833b854c708a81b3129e540ccabbb"
+u_boot_release="v2015.07"
+#bone101_git_sha="50e01966e438ddc43b9177ad4e119e5274a0130d"
 
 #contains: rfs_username, release_date
 if [ -f /etc/rcn-ee.conf ] ; then
@@ -196,6 +196,51 @@ setup_desktop () {
 	fi
 }
 
+install_gem_pkgs () {
+	if [ -f /usr/bin/gem ] ; then
+		echo "Installing gem packages"
+		echo "debug: gem: [`gem --version`]"
+		gem_wheezy="--no-rdoc --no-ri"
+		gem_jessie="--no-document"
+
+		echo "gem: [beaglebone]"
+		gem install beaglebone || true
+
+		echo "gem: [jekyll ${gem_wheezy}]"
+		gem install jekyll ${gem_wheezy} || true
+	fi
+}
+
+install_pip_pkgs () {
+	if [ -f /usr/bin/pip ] ; then
+		echo "Installing pip packages"
+
+		#debian@beaglebone:~$ pip install Adafruit_BBIO
+		#Downloading/unpacking Adafruit-BBIO
+		#  Downloading Adafruit_BBIO-0.0.19.tar.gz
+		#  Running setup.py egg_info for package Adafruit-BBIO
+		#    The required version of distribute (>=0.6.45) is not available,
+		#    and can't be installed while this script is running. Please
+		#    install a more recent version first, using
+		#    'easy_install -U distribute'.
+		#
+		#    (Currently using distribute 0.6.24dev-r0 (/usr/lib/python2.7/dist-packages))
+		#    Complete output from command python setup.py egg_info:
+		#    The required version of distribute (>=0.6.45) is not available,
+		#
+		#and can't be installed while this script is running. Please
+		#
+		#install a more recent version first, using
+		#
+		#'easy_install -U distribute'.
+		#
+		#(Currently using distribute 0.6.24dev-r0 (/usr/lib/python2.7/dist-packages))
+
+		easy_install -U distribute
+		pip install Adafruit_BBIO
+	fi
+}
+
 cleanup_npm_cache () {
 	if [ -d /root/tmp/ ] ; then
 		rm -rf /root/tmp/ || true
@@ -221,6 +266,11 @@ install_node_pkgs () {
 		#echo "--------------------------------"
 		#npm config ls -l
 		#echo "--------------------------------"
+
+		#c9-core-installer...
+		npm config delete cache
+		npm config delete tmp
+		npm config delete python
 
 		#fix npm in chroot.. (did i mention i hate npm...)
 		if [ ! -d /root/.npm ] ; then
@@ -352,51 +402,6 @@ install_node_pkgs () {
 	fi
 }
 
-install_pip_pkgs () {
-	if [ -f /usr/bin/pip ] ; then
-		echo "Installing pip packages"
-
-		#debian@beaglebone:~$ pip install Adafruit_BBIO
-		#Downloading/unpacking Adafruit-BBIO
-		#  Downloading Adafruit_BBIO-0.0.19.tar.gz
-		#  Running setup.py egg_info for package Adafruit-BBIO
-		#    The required version of distribute (>=0.6.45) is not available,
-		#    and can't be installed while this script is running. Please
-		#    install a more recent version first, using
-		#    'easy_install -U distribute'.
-		#
-		#    (Currently using distribute 0.6.24dev-r0 (/usr/lib/python2.7/dist-packages))
-		#    Complete output from command python setup.py egg_info:
-		#    The required version of distribute (>=0.6.45) is not available,
-		#
-		#and can't be installed while this script is running. Please
-		#
-		#install a more recent version first, using
-		#
-		#'easy_install -U distribute'.
-		#
-		#(Currently using distribute 0.6.24dev-r0 (/usr/lib/python2.7/dist-packages))
-
-		easy_install -U distribute
-		pip install Adafruit_BBIO
-	fi
-}
-
-install_gem_pkgs () {
-	if [ -f /usr/bin/gem ] ; then
-		echo "Installing gem packages"
-		echo "debug: gem: [`gem --version`]"
-		gem_wheezy="--no-rdoc --no-ri"
-		gem_jessie="--no-document"
-
-		echo "gem: [beaglebone]"
-		gem install beaglebone || true
-
-		echo "gem: [jekyll ${gem_wheezy}]"
-		gem install jekyll ${gem_wheezy} || true
-	fi
-}
-
 install_git_repos () {
 	git_repo="https://github.com/prpplague/Userspace-Arduino"
 	git_target_dir="/opt/source/Userspace-Arduino"
@@ -521,8 +526,8 @@ setup_system
 setup_desktop
 
 install_gem_pkgs
-install_node_pkgs
 install_pip_pkgs
+install_node_pkgs
 if [ -f /usr/bin/git ] ; then
 	git config --global user.email "${rfs_username}@example.com"
 	git config --global user.name "${rfs_username}"

@@ -1005,7 +1005,8 @@ populate_rootfs () {
 
 	if [ ! "x${rootfs_uuid}" = "x" ] ; then
 		echo "uuid=${rootfs_uuid}" >> ${wfile}
-		echo "" >> ${wfile}
+	else
+		echo "#uuid=" >> ${wfile}
 	fi
 
 	if [ ! "x${dtb}" = "x" ] ; then
@@ -1018,7 +1019,19 @@ populate_rootfs () {
 			echo "##BeagleBone Black dtb's for v4.1.x (BeagleBone White just works..)" >> ${wfile}
 
 			echo "" >> ${wfile}
-			echo "##HDMI/eMMC disabled:" >> ${wfile}
+			echo "##HDMI (Audio/Video) disabled:" >> ${wfile}
+			echo "#am335x-boneblack-emmc-overlay.dtb" >> ${wfile}
+
+			echo "" >> ${wfile}
+			echo "##eMMC disabled:" >> ${wfile}
+			echo "#am335x-boneblack-hdmi-overlay.dtb" >> ${wfile}
+
+			echo "" >> ${wfile}
+			echo "##HDMI Audio/eMMC disabled:" >> ${wfile}
+			echo "#am335x-boneblack-nhdmi-overlay.dtb" >> ${wfile}
+
+			echo "" >> ${wfile}
+			echo "##HDMI (Audio/Video)/eMMC disabled:" >> ${wfile}
 			echo "#dtb=am335x-boneblack-overlay.dtb" >> ${wfile}
 
 			echo "" >> ${wfile}
@@ -1075,7 +1088,9 @@ populate_rootfs () {
 			echo "" >> ${wfile}
 		fi
 
-		if [ "x${bbb_flasher}" = "xenable" ] ; then
+		if [ "x${bbb_usb_flasher}" = "xenable" ] ; then
+			echo "cmdline=init=/opt/scripts/tools/eMMC/init-eMMC-flasher-from-usb-media.sh" >> ${wfile}
+		elif [ "x${bbb_flasher}" = "xenable" ] ; then
 			echo "##enable BBB: eMMC Flasher:" >> ${wfile}
 			echo "cmdline=init=/opt/scripts/tools/eMMC/init-eMMC-flasher-v3.sh" >> ${wfile}
 		elif [ "x${bbg_flasher}" = "xenable" ] ; then
@@ -1547,6 +1562,9 @@ while [ ! -z "$1" ] ; do
 		;;
 	--bbg-flasher)
 		bbg_flasher="enable"
+		;;
+	--bbb-usb-flasher)
+		bbb_usb_flasher="enable"
 		;;
 	--beagleboard.org-production)
 		bborg_production="enable"
