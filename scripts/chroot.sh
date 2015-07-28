@@ -847,7 +847,9 @@ cat > ${DIR}/chroot_script.sh <<-__EOF__
 		if [ -d /var/cache/ti-pru-cgt-installer/ ] ; then
 			rm -rf /var/cache/ti-pru-cgt-installer/ || true
 		fi
-
+		if [ -d /var/cache/vpdma-dra7xx-installer/ ] ; then
+			rm -rf /var/cache/vpdma-dra7xx-installer/ || true
+		fi
 		rm -f /usr/sbin/policy-rc.d
 
 		if [ "x\${distro}" = "xUbuntu" ] ; then
@@ -931,6 +933,10 @@ if [ "x${include_firmware}" = "xenable" ] ; then
 		sudo mkdir -p ${tempdir}/lib/firmware/ti-connectivity
 		sudo cp -v ${DIR}/git/linux-firmware/LICENCE.ti-connectivity ${tempdir}/lib/firmware/
 		sudo cp -v ${DIR}/git/linux-firmware/ti-connectivity/* ${tempdir}/lib/firmware/ti-connectivity
+	fi
+
+	if [ -f ${DIR}/git/mt7601u/src/mcu/bin/MT7601.bin ] ; then
+		sudo cp -v ${DIR}/git/mt7601u/src/mcu/bin/MT7601.bin ${tempdir}/lib/firmware/mt7601u.bin
 	fi
 fi
 
